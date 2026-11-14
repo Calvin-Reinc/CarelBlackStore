@@ -18,26 +18,19 @@ public class Product {
     private String description;
     private BigDecimal price;
     private int stockQuantity;
+    private int categoryId; // Newly added foreign key reference
     private Timestamp createdAt;
 
-    // Default constructor (required for serialization/deserialization frameworks and mapping)
+    // Constructors
     public Product() {}
 
-    // Constructor for creating a new product (before database generates the ID and timestamp)
-    public Product(String productName, String description, BigDecimal price, int stockQuantity) {
-        this.productName = productName;
-        this.description = description;
-        this.price = price;
-        this.stockQuantity = stockQuantity;
-    }
-
-    // Constructor for mapping existing records retrieved from the database
-    public Product(int productId, String productName, String description, BigDecimal price, int stockQuantity, Timestamp createdAt) {
+    public Product(int productId, String productName, String description, BigDecimal price, int stockQuantity, int categoryId, Timestamp createdAt) {
         this.productId = productId;
         this.productName = productName;
         this.description = description;
         this.price = price;
         this.stockQuantity = stockQuantity;
+        this.categoryId = categoryId;
         this.createdAt = createdAt;
     }
 
@@ -82,6 +75,14 @@ public class Product {
         this.stockQuantity = stockQuantity;
     }
 
+    public int getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(int categoryId) {
+        this.categoryId = categoryId;
+    }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }
@@ -89,18 +90,5 @@ public class Product {
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
-
-    @Override
-    public String toString() {
-        return "Product{" +
-                "productId=" + productId +
-                ", productName='" + productName + '\'' +
-                ", description='" + description + '\'' +
-                ", price=" + price +
-                ", stockQuantity=" + stockQuantity +
-                ", createdAt=" + createdAt +
-                '}';
-    }
-}
-    
+} 
 

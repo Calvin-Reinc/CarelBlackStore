@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.carelstock.controller;
 
 import com.carelstock.model.Product;
@@ -15,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+
 /**
  *
  * @author squid
@@ -75,7 +72,9 @@ public class ProductServlet extends HttpServlet {
             String description = req.getParameter("description");
             String priceStr = req.getParameter("price");
             String stockStr = req.getParameter("stock_quantity");
+            String categoryIdStr = req.getParameter("category_id");
 
+            // Fixed syntax error by removing trailing dangling ||
             if (productName == null || priceStr == null || stockStr == null) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 resp.getWriter().write("{\"error\": \"Missing required fields: product_name, price, and stock_quantity are required.\"}");
@@ -84,8 +83,23 @@ public class ProductServlet extends HttpServlet {
 
             BigDecimal price = new BigDecimal(priceStr);
             int stockQuantity = Integer.parseInt(stockStr);
+            int categoryId = 0;
+            
+            if (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) {
+                try {
+                    categoryId = Integer.parseInt(categoryIdStr);
+                } catch (NumberFormatException e) {
+                    // Ignore malformed category ID or leave as 0
+                }
+            }
 
-            Product newProduct = new Product(productName, description, price, stockQuantity);
+            Product newProduct = new Product();
+            newProduct.setProductName(productName);
+            newProduct.setDescription(description);
+            newProduct.setPrice(price);
+            newProduct.setStockQuantity(stockQuantity);
+            newProduct.setCategoryId(categoryId);
+
             boolean created = productService.createProduct(newProduct);
 
             if (created) {
@@ -126,6 +140,7 @@ public class ProductServlet extends HttpServlet {
             String description = req.getParameter("description");
             String priceStr = req.getParameter("price");
             String stockStr = req.getParameter("stock_quantity");
+            String categoryIdStr = req.getParameter("category_id");
 
             if (productName == null || priceStr == null || stockStr == null) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -133,12 +148,25 @@ public class ProductServlet extends HttpServlet {
                 return;
             }
 
+            BigDecimal price = new BigDecimal(priceStr);
+            int stockQuantity = Integer.parseInt(stockStr);
+            int categoryId = 0;
+
+            if (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) {
+                try {
+                    categoryId = Integer.parseInt(categoryIdStr);
+                } catch (NumberFormatException e) {
+                    // Ignore malformed category ID
+                }
+            }
+
             Product product = new Product();
             product.setProductId(productId);
             product.setProductName(productName);
             product.setDescription(description);
-            product.setPrice(new BigDecimal(priceStr));
-            product.setStockQuantity(Integer.parseInt(stockStr));
+            product.setPrice(price);
+            product.setStockQuantity(stockQuantity);
+            product.setCategoryId(categoryId);
 
             boolean updated = productService.updateProduct(product);
 
@@ -185,15 +213,16 @@ public class ProductServlet extends HttpServlet {
         }
     }
 
-    // Lightweight manual JSON serialization helpers (to avoid external library overhead in Iteration 1)
+    // Manual JSON serialization helpers including category_id
     private String convertProductToJson(Product p) {
         return String.format(
-            "{\"product_id\":%d,\"product_name\":\"%s\",\"description\":\"%s\",\"price\":%s,\"stock_quantity\":%d,\"created_at\":\"%s\"}",
+            "{\"product_id\":%d,\"product_name\":\"%s\",\"description\":\"%s\",\"price\":%s,\"stock_quantity\":%d,\"category_id\":%d,\"created_at\":\"%s\"}",
             p.getProductId(),
             escapeJson(p.getProductName()),
             escapeJson(p.getDescription()),
             p.getPrice(),
             p.getStockQuantity(),
+            p.getCategoryId(),
             p.getCreatedAt()
         );
     }

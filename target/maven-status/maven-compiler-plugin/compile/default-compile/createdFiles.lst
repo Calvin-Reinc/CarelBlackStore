@@ -1,7 +1,11 @@
+com/carelstock/model/Category.class
 com/carelstock/database/DatabaseConnection.class
 com/carelstock/service/ProductService.class
 com/carelstock/controller/ProductServlet.class
 com/carelstock/resources/JakartaEE10Resource.class
 com/carelstock/dao/ProductDAO.class
+com/carelstock/service/CategoryService.class
+com/carelstock/controller/CategoryServlet.class
 com/carelstock/JakartaRestConfiguration.class
+com/carelstock/dao/CategoryDAO.class
 com/carelstock/model/Product.class

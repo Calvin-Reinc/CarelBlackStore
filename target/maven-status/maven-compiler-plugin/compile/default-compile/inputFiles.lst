@@ -1,7 +1,11 @@
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/controller/ProductServlet.java
+/home/squid/Projects/CarelStock/src/main/java/com/carelstock/dao/CategoryDAO.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/model/Product.java
+/home/squid/Projects/CarelStock/src/main/java/com/carelstock/model/Category.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/service/ProductService.java
+/home/squid/Projects/CarelStock/src/main/java/com/carelstock/controller/CategoryServlet.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/resources/JakartaEE10Resource.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/JakartaRestConfiguration.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/database/DatabaseConnection.java
+/home/squid/Projects/CarelStock/src/main/java/com/carelstock/service/CategoryService.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/dao/ProductDAO.java
