@@ -48,13 +48,32 @@ public class ProductServlet extends HttpServlet {
                     resp.getWriter().write("{\"error\": \"Product with ID " + productId + " not found.\"}");
                 }
             } else {
-                List<Product> products = productService.getAllProducts();
+                // 1. Extract query parameters including sorting
+                String search = req.getParameter("search");
+                String categoryIdStr = req.getParameter("category_id");
+                String minPriceStr = req.getParameter("min_price");
+                String maxPriceStr = req.getParameter("max_price");
+                String sortBy = req.getParameter("sort_by");       // e.g., price, name, created_at, stock
+                String sortDir = req.getParameter("sort_dir");     // e.g., ASC, DESC
+                String limitStr = req.getParameter("limit");
+                String offsetStr = req.getParameter("offset");
+
+                // 2. Parse optional numeric parameters safely
+                Integer categoryId = (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) ? Integer.parseInt(categoryIdStr) : null;
+                BigDecimal minPrice = (minPriceStr != null && !minPriceStr.trim().isEmpty()) ? new BigDecimal(minPriceStr) : null;
+                BigDecimal maxPrice = (maxPriceStr != null && !maxPriceStr.trim().isEmpty()) ? new BigDecimal(maxPriceStr) : null;
+                Integer limit = (limitStr != null && !limitStr.trim().isEmpty()) ? Integer.parseInt(limitStr) : null;
+                Integer offset = (offsetStr != null && !offsetStr.trim().isEmpty()) ? Integer.parseInt(offsetStr) : null;
+
+                // 3. Pass everything down through the service layer
+                List<Product> products = productService.getFilteredProducts(search, categoryId, minPrice, maxPrice, sortBy, sortDir, limit, offset);
+                
                 resp.getWriter().write(convertProductListToJson(products));
                 resp.setStatus(HttpServletResponse.SC_OK);
             }
         } catch (NumberFormatException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"Invalid product ID format.\"}");
+            resp.getWriter().write("{\"error\": \"Invalid numeric format in query parameters.\"}");
         } catch (Exception e) {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");

@@ -45,6 +45,19 @@ public class ProductService {
         }
         return productDAO.getProductById(productId);
     }
+    
+    public BigDecimal getTotalInventoryValue() {
+        return productDAO.getTotalInventoryValue();
+    }
+    
+    // Updated method accepting sorting parameters
+    public List<Product> getFilteredProducts(String search, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice, 
+                                             String sortBy, String sortDir, Integer limit, Integer offset) {
+        int l = (limit != null && limit > 0) ? limit : 20; // default page size
+        int o = (offset != null && offset >= 0) ? offset : 0; // default offset
+        
+        return productDAO.getFilteredProducts(search, categoryId, minPrice, maxPrice, sortBy, sortDir, l, o);
+    }
 
     // 4. Update product with validation
     public boolean updateProduct(Product product) {

@@ -137,4 +137,96 @@ public class ProductDAO {
         product.setCreatedAt(rs.getTimestamp("created_at"));
         return product;
     }
+    
+    // Dynamic search, filter, and pagination method
+    // Dynamic search, filter, sorting, and pagination method
+    public List<Product> getFilteredProducts(String searchKeyword, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice, 
+                                             String sortBy, String sortDir, int limit, int offset) {
+        List<Product> products = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM products WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        // 1. Keyword search
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (LOWER(product_name) LIKE ? OR LOWER(description) LIKE ?)");
+            String pattern = "%" + searchKeyword.trim().toLowerCase() + "%";
+            params.add(pattern);
+            params.add(pattern);
+        }
+
+        // 2. Category filter
+        if (categoryId != null && categoryId > 0) {
+            sql.append(" AND category_id = ?");
+            params.add(categoryId);
+        }
+
+        // 3. Price range filters
+        if (minPrice != null) {
+            sql.append(" AND price >= ?");
+            params.add(minPrice);
+        }
+        if (maxPrice != null) {
+            sql.append(" AND price <= ?");
+            params.add(maxPrice);
+        }
+
+        // 4. Sorting (Whitelisted to prevent SQL injection)
+        String orderByColumn = "product_id"; // default
+        if ("price".equalsIgnoreCase(sortBy)) {
+            orderByColumn = "price";
+        } else if ("name".equalsIgnoreCase(sortBy)) {
+            orderByColumn = "product_name";
+        } else if ("created_at".equalsIgnoreCase(sortBy)) {
+            orderByColumn = "created_at";
+        } else if ("stock".equalsIgnoreCase(sortBy)) {
+            orderByColumn = "stock_quantity";
+        }
+
+        String direction = "DESC"; // default
+        if ("ASC".equalsIgnoreCase(sortDir)) {
+            direction = "ASC";
+        }
+
+        sql.append(" ORDER BY ").append(orderByColumn).append(" ").append(direction);
+
+        // 5. Pagination
+        sql.append(" LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    products.add(extractProductFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return products;
+    }
+    
+    // Calculate total monetary value of all inventory in stock
+    public BigDecimal getTotalInventoryValue() {
+        String sql = "SELECT SUM(price * stock_quantity) AS total_value FROM products";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            if (rs.next()) {
+                BigDecimal value = rs.getBigDecimal("total_value");
+                return value != null ? value : BigDecimal.ZERO;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return BigDecimal.ZERO;
+    }
+    
 }
