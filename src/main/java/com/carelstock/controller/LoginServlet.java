@@ -96,7 +96,7 @@ public class LoginServlet extends HttpServlet {
             HttpSession session = req.getSession(true);
             session.setMaxInactiveInterval(SESSION_TIMEOUT_SECONDS);
             session.setAttribute("user_id", user.getUserId());
-            session.setAttribute("username", user.getUsername());
+            session.setAttribute("adminUser", user.getUsername());
             session.setAttribute("role", user.getRole());
 
             Map<String, Object> out = new LinkedHashMap<>();
