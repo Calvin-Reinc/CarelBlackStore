@@ -145,21 +145,28 @@ public class OrderDAO {
 
     // Get all orders (Headers only)
     public List<Order> getAllOrders() {
-        List<Order> orders = new ArrayList<>();
-        String sql = "SELECT * FROM orders ORDER BY created_at DESC";
+    List<Order> orders = new ArrayList<>();
+    String sql = "SELECT * FROM orders ORDER BY created_at DESC";
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+    try (Connection conn = DatabaseConnection.getConnection();
+         Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql)) {
 
-            while (rs.next()) {
-                orders.add(extractOrderFromResultSet(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        while (rs.next()) {
+            Order order = extractOrderFromResultSet(rs);
+            
+            // FETCH AND ATTACH ITEMS FOR THIS SPECIFIC ORDER
+            List<OrderItem> items = fetchOrderItemsByOrderId(conn, order.getOrderId());
+            order.setItems(items);
+            
+            orders.add(order);
         }
-        return orders;
+        
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+    return orders;
+}
     
     // Calculate total revenue generated from all orders
     public BigDecimal getTotalRevenue() {
@@ -197,5 +204,58 @@ public class OrderDAO {
         item.setQuantity(rs.getInt("quantity"));
         item.setUnitPrice(rs.getBigDecimal("unit_price"));
         return item;
+    }
+    
+    // Helper method to fetch items for a given order ID
+    private List<OrderItem> fetchOrderItemsByOrderId(Connection conn, int orderId) throws SQLException {
+        List<OrderItem> items = new ArrayList<>();
+        String sql = "SELECT * FROM order_items WHERE order_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    OrderItem item = new OrderItem();
+                    item.setOrderItemId(rs.getInt("order_item_id"));
+                    item.setOrderId(rs.getInt("order_id"));
+                    item.setProductId(rs.getInt("product_id"));
+                    item.setQuantity(rs.getInt("quantity"));
+                    item.setUnitPrice(rs.getBigDecimal("unit_price"));
+                    items.add(item);
+                }
+            }
+        }
+        return items;
+    }
+    
+    public boolean deleteOrder(int orderId) throws SQLException {
+        String deleteItemsSql = "DELETE FROM order_items WHERE order_id = ?";
+        String deleteOrderSql = "DELETE FROM orders WHERE order_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // Disable auto-commit to manage the transaction safely
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement pstmtItems = conn.prepareStatement(deleteItemsSql);
+                 PreparedStatement pstmtOrder = conn.prepareStatement(deleteOrderSql)) {
+
+                // 1. Delete associated order items first (if not using ON DELETE CASCADE)
+                pstmtItems.setInt(1, orderId);
+                pstmtItems.executeUpdate();
+                
+                // 2. Delete the parent order
+                pstmtOrder.setInt(1, orderId);
+                int affectedRows = pstmtOrder.executeUpdate();
+
+                // Commit transaction if successful
+                conn.commit();
+                return affectedRows > 0;
+
+            } catch (SQLException e) {
+                // Rollback if anything goes wrong
+                conn.rollback();
+                throw e;
+            }
+        }
     }
 }

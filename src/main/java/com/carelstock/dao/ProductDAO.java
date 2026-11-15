@@ -25,10 +25,13 @@ public class ProductDAO {
         String sql = "INSERT INTO products (product_name, description, price, stock_quantity, category_id) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+            if (product.getProductName()== null){return false;}
             pstmt.setString(1, product.getProductName());
             pstmt.setString(2, product.getDescription());
-            pstmt.setBigDecimal(3, product.getPrice());
+            if (product.getPrice().compareTo(BigDecimal.ZERO)>0){
+                pstmt.setBigDecimal(3, product.getPrice());
+            } else {return false;}
+            
             pstmt.setInt(4, product.getStockQuantity());
             
             // Handle optional category mapping safely
@@ -111,14 +114,31 @@ public class ProductDAO {
 
     // Delete a product
     public boolean deleteProduct(int productId) {
-        String sql = "DELETE FROM products WHERE product_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, productId);
-            
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
+        String deleteOrderItemsSql = "DELETE FROM order_items WHERE product_id = ?";
+        String deleteProductSql = "DELETE FROM products WHERE product_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false); // 1. Start transaction
+
+            try (PreparedStatement pstmtItems = conn.prepareStatement(deleteOrderItemsSql);
+                 PreparedStatement pstmtProd = conn.prepareStatement(deleteProductSql)) {
+
+                // 2. Delete dependent records in order_items first
+                pstmtItems.setInt(1, productId);
+                pstmtItems.executeUpdate();
+
+                // 3. Now delete the product itself
+                pstmtProd.setInt(1, productId);
+                int affectedRows = pstmtProd.executeUpdate();
+
+                conn.commit(); // 4. Commit transaction successfully
+                return affectedRows > 0;
+
+            } catch (SQLException e) {
+                conn.rollback(); // 5. Rollback changes if anything fails
+                e.printStackTrace();
+                return false;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return false;

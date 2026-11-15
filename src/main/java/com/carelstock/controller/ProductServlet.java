@@ -2,6 +2,12 @@ package com.carelstock.controller;
 
 import com.carelstock.model.Product;
 import com.carelstock.service.ProductService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -11,15 +17,43 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
+ * Product endpoints.
+ *
+ *   GET    /api/products            list (search, category_id, min_price, max_price,
+ *                                    sort_by, sort_dir, limit, offset)
+ *   GET    /api/products?id=1       single product
+ *   POST   /api/products            create  (JSON body)
+ *   PUT    /api/products?id=1       update  (JSON body)
+ *   DELETE /api/products?id=1       delete
+ *
+ * JSON body for POST / PUT:
+ *   { "product_name": "Widget", "description": "...", "price": 9.99,
+ *     "stock_quantity": 20, "category_id": 1 }
  *
  * @author squid
  */
-
-
 @WebServlet("/api/products")
 public class ProductServlet extends HttpServlet {
+
+    private static final Logger LOG = Logger.getLogger(ProductServlet.class.getName());
+
+    // Thread-safe, shared. Java camelCase <-> JSON snake_case (productName <-> product_name).
+    // this caused me a lot of db issues
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+    /** Shape of the JSON body accepted by POST and PUT. Wrapper types so "missing" can be detected. */
+    public record ProductRequest(String productName, String description, BigDecimal price,
+                                 Integer stockQuantity, Integer categoryId) {}
+
     private ProductService productService;
 
     @Override
@@ -28,238 +62,203 @@ public class ProductServlet extends HttpServlet {
         this.productService = new ProductService();
     }
 
-    // 1. GET - Retrieve all products or a single product by ID (?id=1)
+    // 1. GET - all products (filtered/sorted/paged) or a single product by ?id=
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-
-        String idParam = req.getParameter("id");
         try {
-            if (idParam != null && !idParam.trim().isEmpty()) {
-                int productId = Integer.parseInt(idParam);
-                Product product = productService.getProductById(productId);
-                
-                if (product != null) {
-                    resp.getWriter().write(convertProductToJson(product));
-                    resp.setStatus(HttpServletResponse.SC_OK);
-                } else {
-                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    resp.getWriter().write("{\"error\": \"Product with ID " + productId + " not found.\"}");
+            Integer id = parseOptionalInt(req.getParameter("id"), "id");
+
+            if (id != null) {
+                Product product = productService.getProductById(id);
+                if (product == null) {
+                    sendJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                            Map.of("error", "Product with ID " + id + " not found."));
+                    return;
                 }
-            } else {
-                // 1. Extract query parameters including sorting
-                String search = req.getParameter("search");
-                String categoryIdStr = req.getParameter("category_id");
-                String minPriceStr = req.getParameter("min_price");
-                String maxPriceStr = req.getParameter("max_price");
-                String sortBy = req.getParameter("sort_by");       // e.g., price, name, created_at, stock
-                String sortDir = req.getParameter("sort_dir");     // e.g., ASC, DESC
-                String limitStr = req.getParameter("limit");
-                String offsetStr = req.getParameter("offset");
-
-                // 2. Parse optional numeric parameters safely
-                Integer categoryId = (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) ? Integer.parseInt(categoryIdStr) : null;
-                BigDecimal minPrice = (minPriceStr != null && !minPriceStr.trim().isEmpty()) ? new BigDecimal(minPriceStr) : null;
-                BigDecimal maxPrice = (maxPriceStr != null && !maxPriceStr.trim().isEmpty()) ? new BigDecimal(maxPriceStr) : null;
-                Integer limit = (limitStr != null && !limitStr.trim().isEmpty()) ? Integer.parseInt(limitStr) : null;
-                Integer offset = (offsetStr != null && !offsetStr.trim().isEmpty()) ? Integer.parseInt(offsetStr) : null;
-
-                // 3. Pass everything down through the service layer
-                List<Product> products = productService.getFilteredProducts(search, categoryId, minPrice, maxPrice, sortBy, sortDir, limit, offset);
-                
-                resp.getWriter().write(convertProductListToJson(products));
-                resp.setStatus(HttpServletResponse.SC_OK);
+                sendJson(resp, HttpServletResponse.SC_OK, product);
+                return;
             }
-        } catch (NumberFormatException e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"Invalid numeric format in query parameters.\"}");
+
+            String search = req.getParameter("search");
+            Integer categoryId = parseOptionalInt(req.getParameter("category_id"), "category_id");
+            BigDecimal minPrice = parseOptionalDecimal(req.getParameter("min_price"), "min_price");
+            BigDecimal maxPrice = parseOptionalDecimal(req.getParameter("max_price"), "max_price");
+            String sortBy = req.getParameter("sort_by");
+            String sortDir = req.getParameter("sort_dir");
+            Integer limit = parseOptionalInt(req.getParameter("limit"), "limit");
+            Integer offset = parseOptionalInt(req.getParameter("offset"), "offset");
+
+            if (limit != null && (limit < 1 || limit > 100)) {
+                throw new IllegalArgumentException("limit must be between 1 and 100.");
+            }
+            if (offset != null && offset < 0) {
+                throw new IllegalArgumentException("offset must be 0 or greater.");
+            }
+            if (sortDir != null && !sortDir.isBlank()
+                    && !sortDir.equalsIgnoreCase("ASC") && !sortDir.equalsIgnoreCase("DESC")) {
+                throw new IllegalArgumentException("sort_dir must be ASC or DESC.");
+            }
+            // sort_by is passed through as-is: ProductDAO must whitelist it before it reaches SQL.
+
+            List<Product> products = productService.getFilteredProducts(
+                    search, categoryId, minPrice, maxPrice, sortBy, sortDir, limit, offset);
+            sendJson(resp, HttpServletResponse.SC_OK, products);
+
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+            handleException(req, resp, e);
         }
     }
 
-    // 2. POST - Create a new product
+    // 2. POST - create a product
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-
         try {
-            String productName = req.getParameter("product_name");
-            String description = req.getParameter("description");
-            String priceStr = req.getParameter("price");
-            String stockStr = req.getParameter("stock_quantity");
-            String categoryIdStr = req.getParameter("category_id");
+            Product product = toProduct(readBody(req));
 
-            // Fixed syntax error by removing trailing dangling ||
-            if (productName == null || priceStr == null || stockStr == null) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Missing required fields: product_name, price, and stock_quantity are required.\"}");
-                return;
-            }
-
-            BigDecimal price = new BigDecimal(priceStr);
-            int stockQuantity = Integer.parseInt(stockStr);
-            int categoryId = 0;
-            
-            if (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) {
-                try {
-                    categoryId = Integer.parseInt(categoryIdStr);
-                } catch (NumberFormatException e) {
-                    // Ignore malformed category ID or leave as 0
-                }
-            }
-
-            Product newProduct = new Product();
-            newProduct.setProductName(productName);
-            newProduct.setDescription(description);
-            newProduct.setPrice(price);
-            newProduct.setStockQuantity(stockQuantity);
-            newProduct.setCategoryId(categoryId);
-
-            boolean created = productService.createProduct(newProduct);
-
-            if (created) {
-                resp.setStatus(HttpServletResponse.SC_CREATED);
-                resp.getWriter().write("{\"message\": \"Product created successfully.\"}");
+            if (productService.createProduct(product)) {
+                sendJson(resp, HttpServletResponse.SC_CREATED,
+                        Map.of("message", "Product created successfully."));
             } else {
-                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                resp.getWriter().write("{\"error\": \"Failed to create product in database.\"}");
+                sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                        Map.of("error", "Failed to create product."));
             }
-        } catch (NumberFormatException e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"Invalid numeric format for price or stock quantity.\"}");
-        } catch (IllegalArgumentException e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+            handleException(req, resp, e);
         }
     }
 
-    // 3. PUT - Update an existing product
+    // 3. PUT - update a product (?id= in the URL, fields in the JSON body)
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-
         try {
-            String idParam = req.getParameter("id");
-            if (idParam == null || idParam.trim().isEmpty()) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Product ID is required for updating.\"}");
-                return;
+            Integer id = parseOptionalInt(req.getParameter("id"), "id");
+            if (id == null) {
+                throw new IllegalArgumentException("Product ID is required for updating.");
             }
 
-            int productId = Integer.parseInt(idParam);
-            String productName = req.getParameter("product_name");
-            String description = req.getParameter("description");
-            String priceStr = req.getParameter("price");
-            String stockStr = req.getParameter("stock_quantity");
-            String categoryIdStr = req.getParameter("category_id");
+            Product product = toProduct(readBody(req));
+            product.setProductId(id);
 
-            if (productName == null || priceStr == null || stockStr == null) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Missing required fields for update.\"}");
-                return;
-            }
-
-            BigDecimal price = new BigDecimal(priceStr);
-            int stockQuantity = Integer.parseInt(stockStr);
-            int categoryId = 0;
-
-            if (categoryIdStr != null && !categoryIdStr.trim().isEmpty()) {
-                try {
-                    categoryId = Integer.parseInt(categoryIdStr);
-                } catch (NumberFormatException e) {
-                    // Ignore malformed category ID
-                }
-            }
-
-            Product product = new Product();
-            product.setProductId(productId);
-            product.setProductName(productName);
-            product.setDescription(description);
-            product.setPrice(price);
-            product.setStockQuantity(stockQuantity);
-            product.setCategoryId(categoryId);
-
-            boolean updated = productService.updateProduct(product);
-
-            if (updated) {
-                resp.setStatus(HttpServletResponse.SC_OK);
-                resp.getWriter().write("{\"message\": \"Product updated successfully.\"}");
+            if (productService.updateProduct(product)) {
+                sendJson(resp, HttpServletResponse.SC_OK,
+                        Map.of("message", "Product updated successfully."));
             } else {
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                resp.getWriter().write("{\"error\": \"Product not found or update failed.\"}");
+                sendJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                        Map.of("error", "Product not found or update failed."));
             }
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+            handleException(req, resp, e);
         }
     }
 
-    // 4. DELETE - Remove a product by ID (?id=1)
+    // 4. DELETE - remove a product by ?id=
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-
-        String idParam = req.getParameter("id");
         try {
-            if (idParam == null || idParam.trim().isEmpty()) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Product ID is required for deletion.\"}");
-                return;
+            Integer id = parseOptionalInt(req.getParameter("id"), "id");
+            if (id == null) {
+                throw new IllegalArgumentException("Product ID is required for deletion.");
             }
 
-            int productId = Integer.parseInt(idParam);
-            boolean deleted = productService.deleteProduct(productId);
-
-            if (deleted) {
-                resp.setStatus(HttpServletResponse.SC_OK);
-                resp.getWriter().write("{\"message\": \"Product deleted successfully.\"}");
+            if (productService.deleteProduct(id)) {
+                sendJson(resp, HttpServletResponse.SC_OK,
+                        Map.of("message", "Product deleted successfully."));
             } else {
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                resp.getWriter().write("{\"error\": \"Product not found.\"}");
+                sendJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                        Map.of("error", "Product not found."));
             }
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+            handleException(req, resp, e);
         }
     }
 
-    // Manual JSON serialization helpers including category_id
-    private String convertProductToJson(Product p) {
-        return String.format(
-            "{\"product_id\":%d,\"product_name\":\"%s\",\"description\":\"%s\",\"price\":%s,\"stock_quantity\":%d,\"category_id\":%d,\"created_at\":\"%s\"}",
-            p.getProductId(),
-            escapeJson(p.getProductName()),
-            escapeJson(p.getDescription()),
-            p.getPrice(),
-            p.getStockQuantity(),
-            p.getCategoryId(),
-            p.getCreatedAt()
-        );
-    }
+    // ---------------------------------------------------------------------
+    // Request handling helpers
+    // ---------------------------------------------------------------------
 
-    private String convertProductListToJson(List<Product> products) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < products.size(); i++) {
-            sb.append(convertProductToJson(products.get(i)));
-            if (i < products.size() - 1) {
-                sb.append(",");
-            }
+    private ProductRequest readBody(HttpServletRequest req) throws IOException {
+        ProductRequest body = MAPPER.readValue(req.getReader(), ProductRequest.class);
+        if (body == null) {
+            throw new IllegalArgumentException("Request body is required.");
         }
-        sb.append("]");
-        return sb.toString();
+        return body;
     }
 
-    private String escapeJson(String str) {
-        if (str == null) return "";
-        return str.replace("\"", "\\\"");
+    /** Validates the request and maps it to the Product model. Messages here are safe to show the client. */
+    private Product toProduct(ProductRequest r) {
+        if (r.productName() == null || r.productName().isBlank()) {
+            throw new IllegalArgumentException("product_name is required.");
+        }
+        if (r.productName().trim().length() > 255) {
+            throw new IllegalArgumentException("product_name must be at most 255 characters.");
+        }
+        if (r.price() == null || r.price().signum() < 0) {
+            throw new IllegalArgumentException("price is required and must be 0 or greater.");
+        }
+        if (r.stockQuantity() == null || r.stockQuantity() < 0) {
+            throw new IllegalArgumentException("stock_quantity is required and must be 0 or greater.");
+        }
+        if (r.categoryId() == null || r.categoryId() <= 0) {
+            throw new IllegalArgumentException("category_id is required.");
+        }
+
+        Product p = new Product();
+        p.setProductName(r.productName().trim());
+        p.setDescription(r.description());
+        p.setPrice(r.price());
+        p.setStockQuantity(r.stockQuantity());
+        p.setCategoryId(r.categoryId());
+        return p;
+    }
+
+    private static Integer parseOptionalInt(String raw, String name) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return Integer.valueOf(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(name + " must be an integer.");
+        }
+    }
+
+    private static BigDecimal parseOptionalDecimal(String raw, String name) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return new BigDecimal(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(name + " must be a number.");
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Response helpers
+    // ---------------------------------------------------------------------
+
+    /** Serialises first, so a serialisation failure can't leave a half-written response. */
+    private void sendJson(HttpServletResponse resp, int status, Object body) throws IOException {
+        String json = MAPPER.writeValueAsString(body);
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.setStatus(status);
+        resp.getWriter().write(json);
+    }
+
+    /**
+     * Single place that maps exceptions to responses.
+     *  - bad JSON / validation problems -> 400 with a safe message
+     *  - anything else                  -> logged on the server, generic 500 to the client
+     *    (e.getMessage() used to be sent to the client, which leaks SQL/internal details)
+     */
+    private void handleException(HttpServletRequest req, HttpServletResponse resp, Exception e) throws IOException {
+        if (e instanceof JsonProcessingException) {
+            sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "Malformed or invalid JSON body."));
+        } else if (e instanceof IllegalArgumentException) {   // includes our validation errors
+            sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", String.valueOf(e.getMessage())));
+        } else {
+            LOG.log(Level.SEVERE, "Unhandled error on " + req.getMethod() + " " + req.getRequestURI(), e);
+            sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Internal server error."));
+        }
     }
 }

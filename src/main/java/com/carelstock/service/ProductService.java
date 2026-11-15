@@ -5,7 +5,8 @@
 package com.carelstock.service;
 
 /**
- *
+ * This one just act as a security layer as to the controller doesnt interact with the DAOs
+ * 
  * @author squid
  */
 

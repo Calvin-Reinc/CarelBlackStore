@@ -30,7 +30,7 @@ public class OrderService {
 
     // Process an order with server-side validation, price snapshotting, and total calculation
     public boolean createOrder(Order order) {
-        // 1. Basic input validation
+        // Basic input validation
         if (order.getCustomerName() == null || order.getCustomerName().trim().isEmpty()) {
             return false;
         }
@@ -42,7 +42,7 @@ public class OrderService {
 
         BigDecimal calculatedTotal = BigDecimal.ZERO;
 
-        // 2. Validate products, fetch authoritative prices, and compute total amount
+        // Validate products, fetch authoritative prices, and compute total amount
         for (OrderItem item : items) {
             if (item.getQuantity() <= 0) {
                 return false; // Invalid quantity
@@ -66,11 +66,11 @@ public class OrderService {
             calculatedTotal = calculatedTotal.add(itemTotal);
         }
 
-        // 3. Assign calculated total to the order
+        //  Assign calculated total to the order
         order.setTotalAmount(calculatedTotal);
         order.setStatus("COMPLETED");
 
-        // 4. Delegate to DAO for transactional insertion and stock deduction
+        // Delegate to DAO for transactional insertion and stock deduction
         return orderDAO.createOrder(order);
     }
 
@@ -82,5 +82,10 @@ public class OrderService {
     // Get all orders
     public List<Order> getAllOrders() {
         return orderDAO.getAllOrders();
+    }
+    
+    public boolean deleteOrder(int id) throws Exception {
+        
+        return orderDAO.deleteOrder(id);
     }
 }

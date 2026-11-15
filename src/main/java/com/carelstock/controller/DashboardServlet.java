@@ -1,12 +1,10 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.carelstock.controller;
 
 import com.carelstock.dao.CategoryDAO;
 import com.carelstock.dao.OrderDAO;
 import com.carelstock.dao.ProductDAO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -15,14 +13,33 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
+ * Dashboard summary.
+ *
+ *   GET /api/dashboard
+ *   200 -> { "total_inventory_value", "total_products", "total_categories",
+ *            "total_orders", "total_revenue" }
+ *
+ * TODO (service/DAO phase): this servlet talks to the DAOs directly and counts rows by loading
+ * every product, category and order into memory. Both should move: counts into COUNT(*) queries
+ * in the DAOs, and the assembly into a DashboardService, so the servlet only calls the service.
  *
  * @author squid
  */
-
-
 @WebServlet("/api/dashboard")
 public class DashboardServlet extends HttpServlet {
+
+    private static final Logger LOG = Logger.getLogger(DashboardServlet.class.getName());
+
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+
     private ProductDAO productDAO;
     private OrderDAO orderDAO;
     private CategoryDAO categoryDAO;
@@ -37,31 +54,32 @@ public class DashboardServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-
         try {
-            BigDecimal totalInventoryValue = productDAO.getTotalInventoryValue();
-            int totalProductsCount = productDAO.getAllProducts().size();
-            int totalCategoriesCount = categoryDAO.getAllCategories().size();
-            int totalOrdersCount = orderDAO.getAllOrders().size();
-            BigDecimal totalRevenue = orderDAO.getTotalRevenue();
+            Map<String, Object> summary = new LinkedHashMap<>();
+            // An empty table can make SUM() return null, so default to zero
+            summary.put("total_inventory_value",
+                    Objects.requireNonNullElse(productDAO.getTotalInventoryValue(), BigDecimal.ZERO));
+            summary.put("total_products", productDAO.getAllProducts().size());      // TODO: COUNT(*)
+            summary.put("total_categories", categoryDAO.getAllCategories().size()); // TODO: COUNT(*)
+            summary.put("total_orders", orderDAO.getAllOrders().size());            // TODO: COUNT(*)
+            summary.put("total_revenue",
+                    Objects.requireNonNullElse(orderDAO.getTotalRevenue(), BigDecimal.ZERO));
 
-            String jsonResponse = String.format(
-                "{\"total_inventory_value\":%s,\"total_products\":%d,\"total_categories\":%d,\"total_orders\":%d,\"total_revenue\":%s}",
-                totalInventoryValue,
-                totalProductsCount,
-                totalCategoriesCount,
-                totalOrdersCount,
-                totalRevenue
-            );
-
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.getWriter().write(jsonResponse);
+            sendJson(resp, HttpServletResponse.SC_OK, summary);
 
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+            LOG.log(Level.SEVERE, "Unhandled error building dashboard summary", e);
+            sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Internal server error."));
         }
+    }
+
+    /** Serialises first, so a serialisation failure can't leave a half-written response. */
+    private void sendJson(HttpServletResponse resp, int status, Object body) throws IOException {
+        String json = MAPPER.writeValueAsString(body);
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.setStatus(status);
+        resp.getWriter().write(json);
     }
 }

@@ -1,34 +1,66 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.carelstock.controller;
 
 import com.carelstock.model.Order;
 import com.carelstock.model.OrderItem;
 import com.carelstock.service.OrderService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
+ * Order endpoints.
  *
- * @author squid
- */
-
-
-
-/**
+ *   GET  /api/orders          list all orders
+ *   GET  /api/orders?id=1     single order, including its line items
+ *   POST /api/orders          place an order (JSON body); stock is deducted atomically by OrderService
+ *
+ * JSON body for POST:
+ *   { "customer_name": "Acme Ltd",
+ *     "items": [ { "product_id": 1, "quantity": 2 },
+ *                { "product_id": 5, "quantity": 1 } ] }
+ *
+ * Orders cannot be edited or deleted through the API (PUT/DELETE return 405).
+ *
  * @author squid
  */
 @WebServlet("/api/orders")
 public class OrderServlet extends HttpServlet {
+
+    private static final Logger LOG = Logger.getLogger(OrderServlet.class.getName());
+
+    private static final int MAX_ITEMS_PER_ORDER = 100;
+    private static final int MAX_QUANTITY_PER_ITEM = 100_000;
+
+    // Thread-safe, shared. Java camelCase <-> JSON snake_case (customerName <-> customer_name).
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+    /** One line of the order. Wrapper types so "missing" can be detected. */
+    public record OrderItemRequest(Integer productId, Integer quantity) {}
+
+    /** Shape of the JSON body accepted by POST. */
+    public record OrderRequest(String customerName, List<OrderItemRequest> items) {}
+
     private OrderService orderService;
 
     @Override
@@ -37,194 +69,172 @@ public class OrderServlet extends HttpServlet {
         this.orderService = new OrderService();
     }
 
-    // 1. GET - Retrieve all orders or a single order by ID (?id=1) including line items
+    // 1. GET - all orders, or a single order (with line items) by ?id=
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-
-        String idParam = req.getParameter("id");
         try {
-            if (idParam != null && !idParam.trim().isEmpty()) {
-                int orderId = Integer.parseInt(idParam);
-                Order order = orderService.getOrderById(orderId);
+            Integer id = parseOptionalInt(req.getParameter("id"), "id");
 
-                if (order != null) {
-                    resp.getWriter().write(convertOrderToJson(order));
-                    resp.setStatus(HttpServletResponse.SC_OK);
-                } else {
-                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    resp.getWriter().write("{\"error\": \"Order with ID " + orderId + " not found.\"}");
-                }
-            } else {
+            if (id == null) {
                 List<Order> orders = orderService.getAllOrders();
-                resp.getWriter().write(convertOrderListToJson(orders));
-                resp.setStatus(HttpServletResponse.SC_OK);
+                sendJson(resp, HttpServletResponse.SC_OK, orders);
+                return;
             }
-        } catch (NumberFormatException e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"Invalid order ID format.\"}");
+
+            Order order = orderService.getOrderById(id);
+            if (order == null) {
+                sendJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                        Map.of("error", "Order with ID " + id + " not found."));
+                return;
+            }
+            sendJson(resp, HttpServletResponse.SC_OK, order);
+
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+            handleException(req, resp, e);
         }
     }
 
-    // 2. POST - Create a new order with line items and atomic transaction processing
+    // 2. POST - place a new order with line items
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        try {
+            Order order = toOrder(readBody(req));
+
+            if (orderService.createOrder(order)) {
+                sendJson(resp, HttpServletResponse.SC_CREATED,
+                        Map.of("message", "Order placed successfully and stock deducted."));
+            } else {
+                sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                        Map.of("error", "Failed to place order. Check product IDs or stock availability."));
+            }
+        } catch (Exception e) {
+            handleException(req, resp, e);
+        }
+    }
+    
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        try {
+            // Parse the ID using your existing helper (assuming required ID for delete)
+            Integer id = parseOptionalInt(req.getParameter("id"), "id");
+
+            if (id == null) {
+                sendJson(resp, HttpServletResponse.SC_BAD_REQUEST, 
+                        Map.of("error", "Missing or invalid order ID parameter."));
+                return;
+            }
+
+            // Call your service layer to handle deletion
+            boolean isDeleted = orderService.deleteOrder(id);
+
+            if (!isDeleted) {
+                sendJson(resp, HttpServletResponse.SC_NOT_FOUND, 
+                        Map.of("error", "Order with ID " + id + " not found."));
+                return;
+            }
+
+            // Send a success message back as JSON
+            sendJson(resp, HttpServletResponse.SC_OK, 
+                    Map.of("message", "Order with ID " + id + " successfully deleted."));
+
+        } catch (Exception e) {
+            handleException(req, resp, e);
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Request handling helpers
+    // ---------------------------------------------------------------------
+
+    private OrderRequest readBody(HttpServletRequest req) throws IOException {
+        OrderRequest body = MAPPER.readValue(req.getReader(), OrderRequest.class);
+        if (body == null) {
+            throw new IllegalArgumentException("Request body is required.");
+        }
+        return body;
+    }
+
+    /** Validates the request and maps it to the Order model. Messages here are safe to show the client. */
+    private Order toOrder(OrderRequest r) {
+        if (r.customerName() == null || r.customerName().isBlank()) {
+            throw new IllegalArgumentException("customer_name is required.");
+        }
+        if (r.customerName().trim().length() > 255) {
+            throw new IllegalArgumentException("customer_name must be at most 255 characters.");
+        }
+        if (r.items() == null || r.items().isEmpty()) {
+            throw new IllegalArgumentException("Order must contain at least one item.");
+        }
+        if (r.items().size() > MAX_ITEMS_PER_ORDER) {
+            throw new IllegalArgumentException("Order cannot contain more than " + MAX_ITEMS_PER_ORDER + " items.");
+        }
+
+        List<OrderItem> items = new ArrayList<>();
+        Set<Integer> seenProducts = new HashSet<>();
+
+        for (OrderItemRequest line : r.items()) {
+            if (line == null || line.productId() == null || line.productId() <= 0) {
+                throw new IllegalArgumentException("Each item needs a valid product_id.");
+            }
+            if (line.quantity() == null || line.quantity() <= 0 || line.quantity() > MAX_QUANTITY_PER_ITEM) {
+                throw new IllegalArgumentException(
+                        "quantity for product " + line.productId() + " must be between 1 and " + MAX_QUANTITY_PER_ITEM + ".");
+            }
+            if (!seenProducts.add(line.productId())) {
+                throw new IllegalArgumentException(
+                        "product_id " + line.productId() + " appears more than once. Combine the quantities into one item.");
+            }
+
+            OrderItem item = new OrderItem();
+            item.setProductId(line.productId());
+            item.setQuantity(line.quantity());
+            items.add(item);
+        }
+
+        Order order = new Order();
+        order.setCustomerName(r.customerName().trim());
+        order.setItems(items);
+        return order;
+    }
+
+    private static Integer parseOptionalInt(String raw, String name) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return Integer.valueOf(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(name + " must be an integer.");
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Response helpers
+    // ---------------------------------------------------------------------
+
+    /** Serialises first, so a serialisation failure can't leave a half-written response. */
+    private void sendJson(HttpServletResponse resp, int status, Object body) throws IOException {
+        String json = MAPPER.writeValueAsString(body);
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
-
-        StringBuilder jsonBody = new StringBuilder();
-        try (BufferedReader reader = req.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                jsonBody.append(line);
-            }
-        } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"Failed to read request body.\"}");
-            return;
-        }
-
-        try {
-            // Simple lightweight parsing for demonstration matching manual serialization style
-            String rawJson = jsonBody.toString();
-            
-            // Extract customer_name
-            String customerName = extractJsonField(rawJson, "customer_name");
-            if (customerName == null || customerName.trim().isEmpty()) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Missing required field: customer_name.\"}");
-                return;
-            }
-
-            // Extract items array block
-            List<OrderItem> items = parseOrderItemsFromJson(rawJson);
-            if (items.isEmpty()) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Order must contain at least one valid item with product_id and quantity.\"}");
-                return;
-            }
-
-            Order newOrder = new Order();
-            newOrder.setCustomerName(customerName);
-            newOrder.setItems(items);
-
-            boolean created = orderService.createOrder(newOrder);
-
-            if (created) {
-                resp.setStatus(HttpServletResponse.SC_CREATED);
-                resp.getWriter().write("{\"message\": \"Order placed successfully and stock deducted.\"}");
-            } else {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Failed to place order. Check product IDs or stock availability.\"}");
-            }
-        } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            resp.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
-        }
+        resp.setStatus(status);
+        resp.getWriter().write(json);
     }
 
-    // Helper to extract simple string fields from raw JSON string
-    private String extractJsonField(String json, String fieldName) {
-        String searchKey = "\"" + fieldName + "\":";
-        int idx = json.indexOf(searchKey);
-        if (idx == -1) return null;
-        int start = idx + searchKey.length();
-        while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == '\"')) {
-            if (json.charAt(start) == '\"') {
-                start++;
-                int end = json.indexOf("\"", start);
-                return end != -1 ? json.substring(start, end) : null;
-            }
-            start++;
+    /**
+     * Single place that maps exceptions to responses.
+     *  - bad JSON / validation problems -> 400 with a safe message
+     *  - anything else                  -> logged on the server, generic 500 to the client
+     */
+    private void handleException(HttpServletRequest req, HttpServletResponse resp, Exception e) throws IOException {
+        if (e instanceof JsonProcessingException) {
+            sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "Malformed or invalid JSON body."));
+        } else if (e instanceof IllegalArgumentException) {   // includes our validation errors
+            sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", String.valueOf(e.getMessage())));
+        } else {
+            LOG.log(Level.SEVERE, "Unhandled error on " + req.getMethod() + " " + req.getRequestURI(), e);
+            sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Internal server error."));
         }
-        int end = start;
-        while (end < json.length() && json.charAt(end) != ',' && json.charAt(end) != '}') {
-            end++;
-        }
-        return json.substring(start, end).trim().replace("\"", "");
-    }
-
-    // Helper to parse items from a basic JSON string structure
-    private List<OrderItem> parseOrderItemsFromJson(String json) {
-        List<OrderItem> items = new ArrayList<>();
-        int itemsIdx = json.indexOf("\"items\"");
-        if (itemsIdx == -1) return items;
-
-        int bracketStart = json.indexOf("[", itemsIdx);
-        int bracketEnd = json.indexOf("]", bracketStart);
-        if (bracketStart == -1 || bracketEnd == -1) return items;
-
-        String itemsContent = json.substring(bracketStart + 1, bracketEnd);
-        String[] itemObjects = itemsContent.split("\\},\\s*\\{");
-
-        for (String obj : itemObjects) {
-            String cleanObj = obj.replace("{", "").replace("}", "");
-            String productIdStr = extractJsonField("{" + cleanObj + "}", "product_id");
-            String quantityStr = extractJsonField("{" + cleanObj + "}", "quantity");
-
-            if (productIdStr != null && quantityStr != null) {
-                try {
-                    int productId = Integer.parseInt(productIdStr.trim());
-                    int quantity = Integer.parseInt(quantityStr.trim());
-                    if (quantity > 0) {
-                        OrderItem item = new OrderItem();
-                        item.setProductId(productId);
-                        item.setQuantity(quantity);
-                        items.add(item);
-                    }
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        return items;
-    }
-
-    // Manual JSON serialization for single order (including line items)
-    private String convertOrderToJson(Order o) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("{\"order_id\":%d,\"customer_name\":\"%s\",\"total_amount\":%s,\"status\":\"%s\",\"created_at\":\"%s\",\"items\":[",
-            o.getOrderId(),
-            escapeJson(o.getCustomerName()),
-            o.getTotalAmount(),
-            escapeJson(o.getStatus()),
-            o.getCreatedAt()
-        ));
-
-        if (o.getItems() != null) {
-            for (int i = 0; i < o.getItems().size(); i++) {
-                OrderItem item = o.getItems().get(i);
-                sb.append(String.format("{\"order_item_id\":%d,\"product_id\":%d,\"quantity\":%d,\"unit_price\":%s}",
-                    item.getOrderItemId(),
-                    item.getProductId(),
-                    item.getQuantity(),
-                    item.getUnitPrice()
-                ));
-                if (i < o.getItems().size() - 1) {
-                    sb.append(",");
-                }
-            }
-        }
-        sb.append("]}");
-        return sb.toString();
-    }
-
-    private String convertOrderListToJson(List<Order> orders) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < orders.size(); i++) {
-            sb.append(convertOrderToJson(orders.get(i)));
-            if (i < orders.size() - 1) {
-                sb.append(",");
-            }
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    private String escapeJson(String str) {
-        if (str == null) return "";
-        return str.replace("\"", "\\\"");
     }
 }
