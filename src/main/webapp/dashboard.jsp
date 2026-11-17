@@ -8,7 +8,7 @@
     Object adminAttr = session.getAttribute("adminUser");
     String adminUsername = "Admin";
     if (adminAttr instanceof String) {
-        adminUsername = (String) adminUsername;
+        adminUsername = (String) adminAttr;
     } else if (adminAttr != null) {
         try {
             Object val = adminAttr.getClass().getMethod("getUsername").invoke(adminAttr);
@@ -79,6 +79,7 @@
         .modal-content,
         .offcanvas,
         .form-control,
+        .form-select,
         .btn,
         .alert,
         .badge {
@@ -94,7 +95,8 @@
             border: 1px solid #111111;
         }
 
-        .form-control:focus {
+        .form-control:focus,
+        .form-select:focus {
             border-color: #111111;
             box-shadow: 0 0 0 0.2rem rgba(17, 17, 17, 0.12);
         }
@@ -240,6 +242,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column p-3">
+            <p class="text-uppercase text-muted small fw-semibold mb-2 px-2">Sections</p>
             <nav class="d-flex flex-column gap-2">
                 <a class="menu-nav-link active" href="#" onclick="switchTab('products', event)" id="navProducts">
                     <i class="bi bi-box-seam me-3"></i> Products
@@ -342,7 +345,7 @@
                                 <th>Description</th>
                                 <th>Price</th>
                                 <th>Stock</th>
-                                <th>Category ID</th>
+                                <th>Category</th>
                                 <th class="pe-3 text-end">Actions</th>
                             </tr>
                         </thead>
@@ -454,18 +457,21 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <label for="modalProductPrice" class="form-label small fw-semibold">Price (R)</label>
                                 <input type="number" step="0.01" min="0" class="form-control" id="modalProductPrice" required>
                             </div>
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <label for="modalProductStock" class="form-label small fw-semibold">Stock Qty</label>
                                 <input type="number" min="0" class="form-control" id="modalProductStock" required>
                             </div>
-                            <div class="col-sm-4">
-                                <label for="modalProductCategory" class="form-label small fw-semibold">Category ID</label>
-                                <input type="number" min="1" class="form-control" id="modalProductCategory" required>
-                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modalProductCategory" class="form-label small fw-semibold">Category</label>
+                            <select class="form-select" id="modalProductCategory" required>
+                                <option value="" disabled selected>Loading categories...</option>
+                            </select>
                         </div>
 
                         <div class="mb-4">
@@ -527,6 +533,8 @@
     <script>
         let productModal, categoryModal, menuOffcanvas;
         const productsCache = new Map();
+        const categoriesCache = new Map();
+        const DEFAULT_PRODUCT_IMAGE = 'assets/img/default.png'; // or your default image path
 
         document.addEventListener('DOMContentLoaded', () => {
             productModal = new bootstrap.Modal(document.getElementById('productModal'));
@@ -534,6 +542,66 @@
             menuOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('menuOffcanvas'));
             loadProducts();
         });
+
+        async function fetchCategoryMap() {
+            try {
+                const res = await fetch('api/categories');
+                if (res.status === 401) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (!res.ok) {
+                    populateCategorySelect();
+                    return;
+                }
+                const categories = await res.json();
+                categoriesCache.clear();
+
+                if (Array.isArray(categories)) {
+                    categories.forEach(c => {
+                        const cid = c.category_id ?? 0;
+                        const cname = c.category_name ?? `Category #\${cid}`;
+                        if (cid > 0) {
+                            categoriesCache.set(cid, cname);
+                        }
+                    });
+                }
+                populateCategorySelect();
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+                populateCategorySelect();
+            }
+        }
+
+        function populateCategorySelect(selectedId = '') {
+            const select = document.getElementById('modalProductCategory');
+            if (!select) return;
+
+            select.innerHTML = '';
+
+            if (categoriesCache.size === 0) {
+                select.innerHTML = `<option value="" disabled selected>No categories available — add one first</option>`;
+                return;
+            }
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Select a category...';
+            defaultOpt.disabled = true;
+            defaultOpt.selected = true;
+            select.appendChild(defaultOpt);
+
+            categoriesCache.forEach((name, id) => {
+                const opt = document.createElement('option');
+                opt.value = String(id);
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+
+            if (selectedId && categoriesCache.has(Number(selectedId))) {
+                select.value = String(selectedId);
+            }
+        }
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -595,13 +663,23 @@
             const price = p.price ?? 0;
             const stock = p.stock_quantity ?? 0;
             const catId = p.category_id ?? 0;
+            const catName = catId > 0
+                ? (categoriesCache.get(catId) ?? `Category #\${catId}`)
+                : 'Uncategorized';
             const imageUrl = p.image_url ?? '';
 
             productsCache.set(id, p);
 
-            const thumbHtml = imageUrl
-                ? `<a href="product.jsp?id=\${id}" title="View product"><img src="\${escapeHtml(imageUrl)}" alt="\${escapeHtml(name)}" class="product-thumb"></a>`
-                : `<a href="product.jsp?id=\${id}" title="View product" class="product-thumb-placeholder text-decoration-none"><i class="bi bi-image"></i></a>`;
+            const displayImg = imageUrl || DEFAULT_PRODUCT_IMAGE;
+
+            const thumbHtml = `
+                <a href="product.jsp?id=\${id}" title="View product">
+                    <img src="\${escapeHtml(displayImg)}"
+                         alt="\${escapeHtml(name)}"
+                         class="product-thumb"
+                         onerror="this.onerror=null; this.src='\${DEFAULT_PRODUCT_IMAGE}';">
+                </a>
+            `;
 
             return `
                 <tr>
@@ -613,7 +691,7 @@
                     <td class="text-muted">\${escapeHtml(desc)}</td>
                     <td>R \${Number(price).toFixed(2)}</td>
                     <td>\${stock}</td>
-                    <td>\${catId}</td>
+                    <td>\${escapeHtml(catName)}</td>
                     <td class="pe-3 text-end text-nowrap">
                         <a href="product.jsp?id=\${id}" class="btn btn-sm btn-outline-dark me-1" title="View Product">
                             <i class="bi bi-eye"></i>
@@ -630,10 +708,21 @@
         }
 
         async function loadProducts() {
+            const tbody = document.getElementById('productsTableBody');
             try {
-                const res = await fetch('api/products');
-                const products = await res.json();
-                const tbody = document.getElementById('productsTableBody');
+                const [prodRes] = await Promise.all([
+                    fetch('api/products'),
+                    fetchCategoryMap()
+                ]);
+                if (prodRes.status === 401) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (!prodRes.ok) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load products.</td></tr>`;
+                    return;
+                }
+                const products = await prodRes.json();
                 tbody.innerHTML = '';
                 productsCache.clear();
 
@@ -647,6 +736,7 @@
                 });
             } catch (err) {
                 console.error('Error loading products:', err);
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Network error loading products.</td></tr>`;
             }
         }
 
@@ -655,7 +745,10 @@
             if (!id) return loadProducts();
 
             try {
-                const res = await fetch(`api/products?id=\${encodeURIComponent(id)}`);
+                const [res] = await Promise.all([
+                    fetch(`api/products?id=\${encodeURIComponent(id)}`),
+                    categoriesCache.size === 0 ? fetchCategoryMap() : Promise.resolve()
+                ]);
                 const tbody = document.getElementById('productsTableBody');
                 tbody.innerHTML = '';
 
@@ -670,13 +763,15 @@
             }
         }
 
-        function openProductModal(mode, id = null) {
+        async function openProductModal(mode, id = null) {
             const form = document.getElementById('productForm');
             form.reset();
 
             const preview = document.getElementById('modalImagePreview');
             preview.src = '';
             preview.classList.add('d-none');
+
+            await fetchCategoryMap();
 
             if (mode === 'edit' && id !== null && productsCache.has(id)) {
                 const p = productsCache.get(id);
@@ -685,7 +780,7 @@
                 document.getElementById('modalProductDesc').value = p.description ?? '';
                 document.getElementById('modalProductPrice').value = p.price ?? 0;
                 document.getElementById('modalProductStock').value = p.stock_quantity ?? 0;
-                document.getElementById('modalProductCategory').value = p.category_id ?? '';
+                populateCategorySelect(p.category_id ?? '');
                 document.getElementById('productModalTitle').textContent = 'Edit Product';
 
                 if (p.image_url) {
@@ -694,6 +789,7 @@
                 }
             } else {
                 document.getElementById('modalProductId').value = '';
+                populateCategorySelect('');
                 document.getElementById('productModalTitle').textContent = 'Add Product';
             }
 
@@ -764,14 +860,24 @@
 
         // --- CATEGORIES LOGIC ---
         async function loadCategories() {
+            const tbody = document.getElementById('categoriesTableBody');
             try {
                 const res = await fetch('api/categories');
+                if (res.status === 401) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Failed to load categories.</td></tr>`;
+                    return;
+                }
                 const categories = await res.json();
-                const tbody = document.getElementById('categoriesTableBody');
                 tbody.innerHTML = '';
+                categoriesCache.clear();
 
                 if (!Array.isArray(categories) || categories.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No categories found.</td></tr>`;
+                    populateCategorySelect();
                     return;
                 }
 
@@ -779,6 +885,7 @@
                     const id = c.category_id ?? 0;
                     const name = c.category_name ?? '';
                     const desc = c.description ?? '';
+                    if (id > 0) categoriesCache.set(id, name);
 
                     tbody.innerHTML += `
                         <tr>
@@ -793,6 +900,7 @@
                         </tr>
                     `;
                 });
+                populateCategorySelect();
             } catch (err) {
                 console.error('Error loading categories:', err);
             }
@@ -847,10 +955,18 @@
 
         // --- STOCK MANAGEMENT LOGIC ---
         async function loadStockLevels() {
+            const tbody = document.getElementById('stockTableBody');
             try {
                 const res = await fetch('api/products');
+                if (res.status === 401) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Failed to load stock levels.</td></tr>`;
+                    return;
+                }
                 const products = await res.json();
-                const tbody = document.getElementById('stockTableBody');
                 tbody.innerHTML = '';
 
                 if (!Array.isArray(products) || products.length === 0) {
@@ -913,10 +1029,18 @@
 
         // --- ORDERS LOGIC ---
         async function loadOrders() {
+            const tbody = document.getElementById('ordersTableBody');
             try {
                 const res = await fetch('api/orders');
+                if (res.status === 401) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Failed to load orders.</td></tr>`;
+                    return;
+                }
                 const orders = await res.json();
-                const tbody = document.getElementById('ordersTableBody');
                 tbody.innerHTML = '';
 
                 if (!Array.isArray(orders) || orders.length === 0) {

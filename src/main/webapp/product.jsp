@@ -71,6 +71,7 @@
         .card,
         .modal-content,
         .form-control,
+        .form-select,
         .btn,
         .alert,
         .badge {
@@ -81,7 +82,8 @@
             border: 1px solid #111111;
         }
 
-        .form-control:focus {
+        .form-control:focus,
+        .form-select:focus {
             border-color: #111111;
             box-shadow: 0 0 0 0.2rem rgba(17, 17, 17, 0.12);
         }
@@ -286,8 +288,8 @@
                     </div>
                     <div class="col-6">
                         <div class="meta-box">
-                            <span class="meta-label">Category ID</span>
-                            <span class="fw-semibold fs-5" id="metaCategoryId">0</span>
+                            <span class="meta-label">Category</span>
+                            <span class="fw-semibold fs-5" id="metaCategoryName">Uncategorized</span>
                         </div>
                     </div>
                     <div class="col-12">
@@ -331,18 +333,21 @@
                         </div>
 
                         <div class="row g-3 mb-3">
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <label for="editProductPrice" class="form-label small fw-semibold">Price (R)</label>
                                 <input type="number" step="0.01" min="0" class="form-control" id="editProductPrice" required>
                             </div>
-                            <div class="col-sm-4">
+                            <div class="col-sm-6">
                                 <label for="editProductStock" class="form-label small fw-semibold">Stock Qty</label>
                                 <input type="number" min="0" class="form-control" id="editProductStock" required>
                             </div>
-                            <div class="col-sm-4">
-                                <label for="editProductCategory" class="form-label small fw-semibold">Category ID</label>
-                                <input type="number" min="1" class="form-control" id="editProductCategory" required>
-                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editProductCategory" class="form-label small fw-semibold">Category</label>
+                            <select class="form-select" id="editProductCategory" required>
+                                <option value="" disabled selected>Loading categories...</option>
+                            </select>
                         </div>
 
                         <div class="mb-4">
@@ -407,12 +412,20 @@
                     fetch('api/categories').catch(() => null)
                 ]);
 
+                if (prodRes.status === 401) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                categoryNames.clear();
                 if (catRes && catRes.ok) {
                     const cats = await catRes.json();
                     if (Array.isArray(cats)) {
                         cats.forEach(c => {
                             const cid = c.category_id ?? 0;
-                            categoryNames.set(cid, c.category_name ?? `Category #\${cid}`);
+                            if (cid > 0) {
+                                categoryNames.set(cid, c.category_name ?? `Category #\${cid}`);
+                            }
                         });
                     }
                 }
@@ -430,6 +443,36 @@
             }
         }
 
+        function populateEditCategorySelect(selectedId = '') {
+            const select = document.getElementById('editProductCategory');
+            if (!select) return;
+
+            select.innerHTML = '';
+
+            if (categoryNames.size === 0) {
+                select.innerHTML = `<option value="" disabled selected>No categories available</option>`;
+                return;
+            }
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Select a category...';
+            defaultOpt.disabled = true;
+            defaultOpt.selected = true;
+            select.appendChild(defaultOpt);
+
+            categoryNames.forEach((name, id) => {
+                const opt = document.createElement('option');
+                opt.value = String(id);
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+
+            if (selectedId && categoryNames.has(Number(selectedId))) {
+                select.value = String(selectedId);
+            }
+        }
+
         function renderProduct(p) {
             currentProduct = p;
 
@@ -439,17 +482,20 @@
             const price = p.price ?? 0;
             const stock = p.stock_quantity ?? 0;
             const catId = p.category_id ?? 0;
+            const catName = catId > 0
+                ? (categoryNames.get(catId) || `Category #\${catId}`)
+                : 'Uncategorized';
             const createdAt = p.created_at ?? 'N/A';
             const imageUrl = p.image_url ?? '';
 
             document.title = `Carel Black - \${name}`;
             document.getElementById('productIdBadge').textContent = `Product #\${id}`;
-            document.getElementById('productCategoryBadge').textContent = categoryNames.get(catId) || `Category #\${catId}`;
+            document.getElementById('productCategoryBadge').textContent = catName;
             document.getElementById('productName').textContent = name;
             document.getElementById('productPrice').textContent = `R \${Number(price).toFixed(2)}`;
             document.getElementById('productDescription').textContent = desc;
             document.getElementById('metaStock').textContent = stock;
-            document.getElementById('metaCategoryId').textContent = catId;
+            document.getElementById('metaCategoryName').textContent = catName;
             document.getElementById('metaCreatedAt').textContent = formatTimestamp(createdAt);
 
             const stockBadge = document.getElementById('productStockBadge');
@@ -506,7 +552,7 @@
             document.getElementById('editProductDesc').value = currentProduct.description ?? '';
             document.getElementById('editProductPrice').value = currentProduct.price ?? 0;
             document.getElementById('editProductStock').value = currentProduct.stock_quantity ?? 0;
-            document.getElementById('editProductCategory').value = currentProduct.category_id ?? 1;
+            populateEditCategorySelect(currentProduct.category_id ?? '');
 
             const preview = document.getElementById('editImagePreview');
             if (currentProduct.image_url) {
