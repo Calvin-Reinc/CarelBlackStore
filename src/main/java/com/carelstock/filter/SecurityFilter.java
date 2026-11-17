@@ -21,7 +21,8 @@ import java.util.Set;
  *  2. CORS: OFF by default (the JSP views are served from the same origin, so none is needed).
  *     To enable it for a separate dev frontend, set the environment variable
  *     CORS_ALLOWED_ORIGIN=http://localhost:3000. Leave it unset in production.
- *  3. POST/PUT must send Content-Type: application/json (415 otherwise). Together with
+ *  3. POST/PUT must send Content-Type: application/json (415 otherwise), except explicitly
+ *     exempt bodyless POSTs and multipart product image upload POSTs. Together with
  *     SameSite=Lax session cookies this blocks cross-site HTML form posts (CSRF).
  *  4. Everything except the public paths needs a logged-in ADMIN session:
  *       no session        -> 401
@@ -53,6 +54,9 @@ public class SecurityFilter implements Filter {
     /** POSTs that legitimately carry no body, so they are exempt from the JSON content-type rule. */
     private static final Set<String> BODYLESS_POST_PATHS = Set.of("/api/auth/logout");
 
+    /** POSTs allowed to send multipart/form-data (e.g. product creation/update with image upload). */
+    private static final Set<String> MULTIPART_POST_PATHS = Set.of("/api/products");
+
     private String corsAllowedOrigin; // null = CORS disabled
 
     @Override
@@ -83,10 +87,15 @@ public class SecurityFilter implements Filter {
 
         String path = normalisedPath(req);
 
-        // 3. JSON-only bodies
+        // 3. JSON-only bodies (except exempt bodyless POSTs and multipart upload POSTs)
+        boolean allowedMultipart = "POST".equals(method)
+                && MULTIPART_POST_PATHS.contains(path)
+                && hasMultipartContentType(req);
+
         if (("POST".equals(method) || "PUT".equals(method))
                 && !BODYLESS_POST_PATHS.contains(path)
-                && !hasJsonContentType(req)) {
+                && !hasJsonContentType(req)
+                && !allowedMultipart) {
             writeError(resp, 415, "Content-Type must be application/json.");
             return;
         }
@@ -144,6 +153,11 @@ public class SecurityFilter implements Filter {
     private static boolean hasJsonContentType(HttpServletRequest req) {
         String contentType = req.getContentType();
         return contentType != null && contentType.toLowerCase().startsWith("application/json");
+    }
+
+    private static boolean hasMultipartContentType(HttpServletRequest req) {
+        String contentType = req.getContentType();
+        return contentType != null && contentType.toLowerCase().startsWith("multipart/form-data");
     }
 
     /** Messages are constants, so no JSON escaping is needed. */

@@ -3,6 +3,7 @@
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/dao/OrderDAO.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/controller/RegisterServlet.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/database/DataAccessException.java
+/home/squid/Projects/CarelStock/src/main/java/com/carelstock/service/CloudinaryService.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/controller/OrderServlet.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/controller/ProductServlet.java
 /home/squid/Projects/CarelStock/src/main/java/com/carelstock/dao/CategoryDAO.java

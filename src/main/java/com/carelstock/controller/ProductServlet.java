@@ -9,13 +9,17 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -27,7 +31,8 @@ import java.util.logging.Logger;
  *   GET    /api/products            list (search, category_id, min_price, max_price,
  *                                    sort_by, sort_dir, limit, offset)
  *   GET    /api/products?id=1       single product
- *   POST   /api/products            create  (JSON body)
+ *   POST   /api/products            create  (JSON body OR multipart/form-data with optional "image")
+ *   POST   /api/products?id=1       update  (multipart/form-data with optional "image")
  *   PUT    /api/products?id=1       update  (JSON body)
  *   DELETE /api/products?id=1       delete
  *
@@ -38,21 +43,25 @@ import java.util.logging.Logger;
  * @author squid
  */
 @WebServlet("/api/products")
+@MultipartConfig(
+        fileSizeThreshold = 1024 * 1024,      // 1 MB
+        maxFileSize = 5L * 1024 * 1024,       // 5 MB max per image
+        maxRequestSize = 6L * 1024 * 1024     // 6 MB total multipart request
+)
 public class ProductServlet extends HttpServlet {
 
     private static final Logger LOG = Logger.getLogger(ProductServlet.class.getName());
 
     // Thread-safe, shared. Java camelCase <-> JSON snake_case (productName <-> product_name).
-    // this caused me a lot of db issues
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-    /** Shape of the JSON body accepted by POST and PUT. Wrapper types so "missing" can be detected. */
+    /** Shape of the JSON / multipart data accepted by POST and PUT. */
     public record ProductRequest(String productName, String description, BigDecimal price,
-                                 Integer stockQuantity, Integer categoryId) {}
+                                 Integer stockQuantity, Integer categoryId, String imageUrl) {}
 
     private ProductService productService;
 
@@ -98,7 +107,6 @@ public class ProductServlet extends HttpServlet {
                     && !sortDir.equalsIgnoreCase("ASC") && !sortDir.equalsIgnoreCase("DESC")) {
                 throw new IllegalArgumentException("sort_dir must be ASC or DESC.");
             }
-            // sort_by is passed through as-is: ProductDAO must whitelist it before it reaches SQL.
 
             List<Product> products = productService.getFilteredProducts(
                     search, categoryId, minPrice, maxPrice, sortBy, sortDir, limit, offset);
@@ -109,15 +117,58 @@ public class ProductServlet extends HttpServlet {
         }
     }
 
-    // 2. POST - create a product
+    // 2. POST - create a product (JSON or multipart), or update with image when ?id= is supplied on multipart
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
-            Product product = toProduct(readBody(req));
+            if (isMultipart(req)) {
+                Integer id = parseOptionalInt(req.getParameter("id"), "id");
+                Product product = toProduct(readMultipartFields(req));
 
+                byte[] imageBytes = null;
+                String imageContentType = null;
+                Part imagePart = req.getPart("image");
+                if (imagePart != null && imagePart.getSize() > 0) {
+                    try (InputStream in = imagePart.getInputStream()) {
+                        imageBytes = in.readAllBytes();
+                    }
+                    imageContentType = imagePart.getContentType();
+                }
+
+                if (id != null) {
+                    product.setProductId(id);
+                    if (productService.updateProduct(product, imageBytes, imageContentType)) {
+                        Map<String, Object> body = new HashMap<>();
+                        body.put("message", "Product updated successfully.");
+                        body.put("image_url", product.getImageUrl());
+                        sendJson(resp, HttpServletResponse.SC_OK, body);
+                    } else {
+                        sendJson(resp, HttpServletResponse.SC_NOT_FOUND,
+                                Map.of("error", "Product not found or update failed."));
+                    }
+                } else {
+                    if (productService.createProduct(product, imageBytes, imageContentType)) {
+                        Map<String, Object> body = new HashMap<>();
+                        body.put("message", "Product created successfully.");
+                        body.put("product_id", product.getProductId());
+                        body.put("image_url", product.getImageUrl());
+                        sendJson(resp, HttpServletResponse.SC_CREATED, body);
+                    } else {
+                        sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                                Map.of("error", "Failed to create product."));
+                    }
+                }
+                return;
+            }
+
+            // Standard JSON create
+            Product product = toProduct(readBody(req));
             if (productService.createProduct(product)) {
-                sendJson(resp, HttpServletResponse.SC_CREATED,
-                        Map.of("message", "Product created successfully."));
+                Map<String, Object> body = new HashMap<>();
+                body.put("message", "Product created successfully.");
+                body.put("product_id", product.getProductId());
+                body.put("image_url", product.getImageUrl());
+                sendJson(resp, HttpServletResponse.SC_CREATED, body);
             } else {
                 sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                         Map.of("error", "Failed to create product."));
@@ -131,6 +182,11 @@ public class ProductServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
+            if (isMultipart(req)) {
+                throw new IllegalArgumentException(
+                        "Use POST /api/products?id={id} with multipart/form-data to upload an image when updating.");
+            }
+
             Integer id = parseOptionalInt(req.getParameter("id"), "id");
             if (id == null) {
                 throw new IllegalArgumentException("Product ID is required for updating.");
@@ -176,12 +232,28 @@ public class ProductServlet extends HttpServlet {
     // Request handling helpers
     // ---------------------------------------------------------------------
 
+    private static boolean isMultipart(HttpServletRequest req) {
+        String contentType = req.getContentType();
+        return contentType != null && contentType.toLowerCase().startsWith("multipart/form-data");
+    }
+
     private ProductRequest readBody(HttpServletRequest req) throws IOException {
         ProductRequest body = MAPPER.readValue(req.getReader(), ProductRequest.class);
         if (body == null) {
             throw new IllegalArgumentException("Request body is required.");
         }
         return body;
+    }
+
+    private ProductRequest readMultipartFields(HttpServletRequest req) {
+        String productName = req.getParameter("product_name");
+        String description = req.getParameter("description");
+        BigDecimal price = parseOptionalDecimal(req.getParameter("price"), "price");
+        Integer stockQuantity = parseOptionalInt(req.getParameter("stock_quantity"), "stock_quantity");
+        Integer categoryId = parseOptionalInt(req.getParameter("category_id"), "category_id");
+        String imageUrl = req.getParameter("image_url");
+
+        return new ProductRequest(productName, description, price, stockQuantity, categoryId, imageUrl);
     }
 
     /** Validates the request and maps it to the Product model. Messages here are safe to show the client. */
@@ -208,6 +280,9 @@ public class ProductServlet extends HttpServlet {
         p.setPrice(r.price());
         p.setStockQuantity(r.stockQuantity());
         p.setCategoryId(r.categoryId());
+        if (r.imageUrl() != null && !r.imageUrl().isBlank()) {
+            p.setImageUrl(r.imageUrl().trim());
+        }
         return p;
     }
 
@@ -244,17 +319,18 @@ public class ProductServlet extends HttpServlet {
 
     /**
      * Single place that maps exceptions to responses.
-     *  - bad JSON / validation problems -> 400 with a safe message
-     *  - anything else                  -> logged on the server, generic 500 to the client
-     *    (e.getMessage() used to be sent to the client, which leaks SQL/internal details)
      */
     private void handleException(HttpServletRequest req, HttpServletResponse resp, Exception e) throws IOException {
         if (e instanceof JsonProcessingException) {
             sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
                     Map.of("error", "Malformed or invalid JSON body."));
-        } else if (e instanceof IllegalArgumentException) {   // includes our validation errors
+        } else if (e instanceof IllegalArgumentException) {
             sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
                     Map.of("error", String.valueOf(e.getMessage())));
+        } else if (e instanceof IllegalStateException && e.getMessage() != null
+                && (e.getMessage().contains("SizeLimit") || e.getMessage().contains("FileSize"))) {
+            sendJson(resp, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "Uploaded image exceeds the 5 MB size limit."));
         } else {
             LOG.log(Level.SEVERE, "Unhandled error on " + req.getMethod() + " " + req.getRequestURI(), e);
             sendJson(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,

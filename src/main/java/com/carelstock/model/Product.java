@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.carelstock.model;
 
 import java.math.BigDecimal;
@@ -11,20 +7,27 @@ import java.sql.Timestamp;
  *
  * @author squid
  */
-
 public class Product {
     private int productId;
     private String productName;
     private String description;
     private BigDecimal price;
     private int stockQuantity;
-    private int categoryId; // Newly added foreign key reference
+    private int categoryId;
     private Timestamp createdAt;
+    private String imageUrl;
+    private String imagePublicId;
 
     // Constructors
     public Product() {}
 
+    // Existing 7-arg constructor preserved for backward compatibility
     public Product(int productId, String productName, String description, BigDecimal price, int stockQuantity, int categoryId, Timestamp createdAt) {
+        this(productId, productName, description, price, stockQuantity, categoryId, createdAt, null, null);
+    }
+
+    // Full constructor including image fields
+    public Product(int productId, String productName, String description, BigDecimal price, int stockQuantity, int categoryId, Timestamp createdAt, String imageUrl, String imagePublicId) {
         this.productId = productId;
         this.productName = productName;
         this.description = description;
@@ -32,6 +35,8 @@ public class Product {
         this.stockQuantity = stockQuantity;
         this.categoryId = categoryId;
         this.createdAt = createdAt;
+        this.imageUrl = imageUrl;
+        this.imagePublicId = imagePublicId;
     }
 
     // Getters and Setters
@@ -90,5 +95,20 @@ public class Product {
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
-} 
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getImagePublicId() {
+        return imagePublicId;
+    }
+
+    public void setImagePublicId(String imagePublicId) {
+        this.imagePublicId = imagePublicId;
+    }
+}

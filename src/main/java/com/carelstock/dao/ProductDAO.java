@@ -16,33 +16,50 @@ import java.util.List;
  *
  * @author squid
  */
-
-
 public class ProductDAO {
 
-    // Create a new product with category support
+    // Create a new product with category and image support
     public boolean createProduct(Product product) {
-        String sql = "INSERT INTO products (product_name, description, price, stock_quantity, category_id) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO products (product_name, description, price, stock_quantity, category_id, image_url, image_public_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            if (product.getProductName()== null){return false;}
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            if (product.getProductName() == null || product.getPrice() == null) {
+                return false;
+            }
+
             pstmt.setString(1, product.getProductName());
             pstmt.setString(2, product.getDescription());
-            if (product.getPrice().compareTo(BigDecimal.ZERO)>0){
+
+            if (product.getPrice().compareTo(BigDecimal.ZERO) > 0) {
                 pstmt.setBigDecimal(3, product.getPrice());
-            } else {return false;}
-            
+            } else {
+                return false;
+            }
+
             pstmt.setInt(4, product.getStockQuantity());
-            
+
             // Handle optional category mapping safely
             if (product.getCategoryId() > 0) {
                 pstmt.setInt(5, product.getCategoryId());
             } else {
                 pstmt.setNull(5, Types.INTEGER);
             }
-            
+
+            // Handle optional Cloudinary image fields safely (null becomes SQL NULL)
+            pstmt.setString(6, product.getImageUrl());
+            pstmt.setString(7, product.getImagePublicId());
+
             int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        product.setProductId(generatedKeys.getInt(1));
+                    }
+                }
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -54,7 +71,7 @@ public class ProductDAO {
         String sql = "SELECT * FROM products WHERE product_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setInt(1, productId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -71,11 +88,11 @@ public class ProductDAO {
     public List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT * FROM products";
-        
+
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             while (rs.next()) {
                 products.add(extractProductFromResultSet(rs));
             }
@@ -87,23 +104,25 @@ public class ProductDAO {
 
     // Update an existing product
     public boolean updateProduct(Product product) {
-        String sql = "UPDATE products SET product_name = ?, description = ?, price = ?, stock_quantity = ?, category_id = ? WHERE product_id = ?";
+        String sql = "UPDATE products SET product_name = ?, description = ?, price = ?, stock_quantity = ?, category_id = ?, image_url = ?, image_public_id = ? WHERE product_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, product.getProductName());
             pstmt.setString(2, product.getDescription());
             pstmt.setBigDecimal(3, product.getPrice());
             pstmt.setInt(4, product.getStockQuantity());
-            
+
             if (product.getCategoryId() > 0) {
                 pstmt.setInt(5, product.getCategoryId());
             } else {
                 pstmt.setNull(5, Types.INTEGER);
             }
-            
-            pstmt.setInt(6, product.getProductId());
-            
+
+            pstmt.setString(6, product.getImageUrl());
+            pstmt.setString(7, product.getImagePublicId());
+            pstmt.setInt(8, product.getProductId());
+
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
@@ -155,12 +174,13 @@ public class ProductDAO {
         product.setStockQuantity(rs.getInt("stock_quantity"));
         product.setCategoryId(rs.getInt("category_id"));
         product.setCreatedAt(rs.getTimestamp("created_at"));
+        product.setImageUrl(rs.getString("image_url"));
+        product.setImagePublicId(rs.getString("image_public_id"));
         return product;
     }
-    
-    // Dynamic search, filter, and pagination method
+
     // Dynamic search, filter, sorting, and pagination method
-    public List<Product> getFilteredProducts(String searchKeyword, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice, 
+    public List<Product> getFilteredProducts(String searchKeyword, Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice,
                                              String sortBy, String sortDir, int limit, int offset) {
         List<Product> products = new ArrayList<>();
         StringBuilder sql = new StringBuilder("SELECT * FROM products WHERE 1=1");
@@ -231,14 +251,14 @@ public class ProductDAO {
         }
         return products;
     }
-    
+
     // Calculate total monetary value of all inventory in stock
     public BigDecimal getTotalInventoryValue() {
         String sql = "SELECT SUM(price * stock_quantity) AS total_value FROM products";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             if (rs.next()) {
                 BigDecimal value = rs.getBigDecimal("total_value");
                 return value != null ? value : BigDecimal.ZERO;
@@ -248,5 +268,4 @@ public class ProductDAO {
         }
         return BigDecimal.ZERO;
     }
-    
 }
