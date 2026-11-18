@@ -3,154 +3,671 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carel Black</title>
+    <title>flying Jvck</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    <!-- Google Fonts: Exile -->
+    <!-- Monospace web font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Exile&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
     <style>
-        html, body {
-            background-color: #ffffff;
-            color: #111111;
-            margin: 0;
+        @font-face {
+            font-family: "Super Squad";
+            src: url("assets/fonts/SuperSquad.woff2") format("woff2"),
+                 url("assets/fonts/SuperSquad.ttf") format("truetype"),
+                 url("assets/fonts/SuperSquad.otf") format("opentype");
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
         }
 
-        .hero-wrapper {
+        :root {
+            --cb-black: #111111;
+            --cb-white: #ffffff;
+            --cb-muted: #6c757d;
+            --cb-spectrum: linear-gradient(
+                90deg,
+                #ff2a6d 0%,
+                #ff7b00 18%,
+                #ffd400 36%,
+                #00c853 54%,
+                #00b0ff 72%,
+                #7c4dff 88%,
+                #ff2a6d 100%
+            );
+        }
+
+        html, body {
+            background-color: var(--cb-white);
+            color: var(--cb-black);
+            font-family: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Subtle paint-spectrum hairline at the top */
+        .spectrum-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--cb-spectrum);
+            z-index: 1030;
+        }
+
+        .page-shell {
             min-height: 100vh;
             min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .store-home {
+            flex: 1 0 auto;
+        }
+
+        .brand-link {
+            display: inline-block;
+            text-decoration: none;
+            color: inherit;
         }
 
         .brand-logo {
-            width: clamp(120px, 24vw, 190px);
+            width: clamp(82px, 16vw, 130px);
             height: auto;
             background-color: transparent;
             display: block;
             margin-inline: auto;
+            transition: transform 0.25s ease;
+        }
+
+        .brand-link:hover .brand-logo {
+            transform: scale(1.03);
         }
 
         .brand-title {
-            font-family: "Exile", system-ui, -apple-system, sans-serif;
-            font-size: clamp(2.5rem, 10vw, 6.5rem);
+            position: relative;
+            display: inline-block;
+            padding-inline: 0.15em;
+            font-family: "Super Squad", Impact, "Arial Black", sans-serif;
+            font-size: clamp(2.6rem, 9vw, 5.4rem);
             line-height: 1.05;
-            letter-spacing: 0.02em;
-            color: #111111;
+            letter-spacing: 0.03em;
+            color: var(--cb-black);
             word-break: break-word;
+            cursor: default;
+            user-select: none;
+            transition: color 0.35s ease;
         }
 
-        .btn-stack {
-            width: 100%;
-            max-width: 260px;
+        /* Zoomed artwork masked cleanly INSIDE the whole letters */
+        .brand-title::after {
+            content: attr(data-text);
+            position: absolute;
+            inset: 0;
+            padding: inherit;
+            background-image:
+                url("assets/img/title-art.jpg?v=2"),
+                url("assets/img/title-art.png?v=2"),
+                linear-gradient(
+                    135deg,
+                    #ff2a6d 0%,
+                    #ff7b00 20%,
+                    #ffd400 40%,
+                    #00c853 60%,
+                    #00b0ff 80%,
+                    #7c4dff 100%
+                );
+            background-size: 220% auto;
+            background-position: 50% 50%;
+            background-repeat: no-repeat;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            transition: opacity 0.4s ease, background-size 0.6s ease, background-position 0.6s ease;
+            pointer-events: none;
         }
 
-        .action-btn {
+        .brand-title:hover,
+        .brand-title:focus-visible,
+        .brand-title.revealed {
+            color: transparent;
+            outline: none;
+        }
+
+        .brand-title:hover::after,
+        .brand-title:focus-visible::after,
+        .brand-title.revealed::after {
+            opacity: 1;
+            background-size: 250% auto;
+            background-position: 52% 48%;
+        }
+
+        @media (max-width: 575.98px) {
+            .brand-title::after {
+                background-size: 300% auto;
+            }
+            .brand-title:hover::after,
+            .brand-title:focus-visible::after,
+            .brand-title.revealed::after {
+                background-size: 330% auto;
+            }
+        }
+
+        .live-clock {
+            font-size: clamp(0.7rem, 1.8vw, 0.82rem);
+            letter-spacing: 0.08em;
+            color: var(--cb-muted);
+            text-transform: uppercase;
+        }
+
+        /* Supreme-style vertical menu (10% smaller) */
+        .home-menu {
             width: 100%;
-            min-height: 48px;
-            padding: 0.75rem 1.75rem;
-            font-size: 1rem;
-            font-weight: 500;
-            letter-spacing: 0.04em;
-            border-radius: 0;
-            display: inline-flex;
+            max-width: 252px;
+        }
+
+        .menu-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-height: 40px;
+            padding: 0.5rem 0.18rem;
+            font-size: 0.81rem;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            text-decoration: none;
+            color: var(--cb-black);
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer;
+            text-align: left;
+            transition: padding-left 0.2s ease;
+        }
+
+        .menu-item::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -1px;
+            width: 0;
+            height: 2px;
+            background: var(--cb-spectrum);
+            transition: width 0.28s ease;
+        }
+
+        .menu-item:hover,
+        .menu-item:focus-visible {
+            color: var(--cb-black);
+            padding-left: 0.4rem;
+            outline: none;
+        }
+
+        .menu-item:hover::after,
+        .menu-item:focus-visible::after {
+            width: 100%;
+        }
+
+        .menu-arrow {
+            font-size: 0.85rem;
+            transition: transform 0.2s ease;
+        }
+
+        .menu-item:hover .menu-arrow {
+            transform: translateX(4px);
+        }
+
+        /* Horizontal mini social/media icons (10% smaller) */
+        .media-links {
+            display: flex;
             align-items: center;
             justify-content: center;
+            gap: 1.125rem;
         }
 
-        /* Active button: solid black at rest -> smooth gray & black gradient on hover */
-        .btn-dashboard {
+        .media-icon {
+            color: var(--cb-black);
+            font-size: 0.945rem;
+            text-decoration: none;
+            opacity: 0.75;
+            transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+        }
+
+        .media-icon:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+        }
+
+        .media-icon.ig:hover { color: #ff2a6d; }
+        .media-icon.tt:hover { color: #00b0ff; }
+        .media-icon.xt:hover { color: #7c4dff; }
+        .media-icon.yt:hover { color: #ff7b00; }
+
+        /* Palette scent dots */
+        .palette-scent {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .palette-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* Bottom footer */
+        .site-footer {
+            border-top: 1px solid #f1f3f5;
+            padding: 1rem 1rem 1.25rem;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem 1.5rem;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .footer-link {
+            background: none;
+            border: none;
+            padding: 0;
+            color: var(--cb-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--cb-black);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        /* Sharp modals & buttons */
+        .modal-content,
+        .form-control,
+        .btn,
+        .alert {
+            border-radius: 0 !important;
+        }
+
+        .modal-content {
+            border: 1px solid var(--cb-black);
+        }
+
+        .form-control:focus {
+            border-color: var(--cb-black);
+            box-shadow: 0 0 0 0.2rem rgba(17, 17, 17, 0.12);
+        }
+
+        .btn-carel {
             color: #ffffff;
             border: 1px solid #111111;
             background-color: #111111;
             background-image: linear-gradient(135deg, #111111 0%, #111111 44%, #6c757d 72%, #000000 100%);
             background-size: 260% 260%;
             background-position: 0% 50%;
-            transition: background-position 0.35s ease, border-color 0.3s ease, transform 0.2s ease, box-shadow 0.25s ease;
+            transition: background-position 0.35s ease, transform 0.15s ease;
         }
 
-        .btn-dashboard:hover,
-        .btn-dashboard:focus-visible {
+        .btn-carel:hover:not(:disabled) {
             color: #ffffff;
-            border-color: #343a40;
             background-position: 100% 50%;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+            transform: translateY(-1px);
         }
 
-        .btn-dashboard:active {
-            transform: translateY(0);
-            color: #ffffff;
-        }
-
-        /* Unclickable Store button */
-        .store-btn-wrap {
-            width: 100%;
-            cursor: not-allowed;
-        }
-
-        .btn-store-disabled,
-        .btn-store-disabled:disabled {
-            color: #111111;
-            background-color: transparent;
-            border: 1px solid #111111;
-            opacity: 0.4;
-            pointer-events: none;
-        }
-
-        /* Tablet & larger spacing */
-        @media (min-width: 768px) {
-            .btn-stack {
-                max-width: 240px;
-            }
-        }
-
-        /* Short landscape viewports (e.g., rotated phones or small laptops) */
-        @media (max-height: 600px) {
+        @media (max-height: 680px) {
             .brand-logo {
-                width: 105px;
-                margin-bottom: 0.75rem !important;
+                width: 72px;
             }
-
             .brand-title {
-                font-size: clamp(2.2rem, 7vw, 4rem);
-                margin-bottom: 1.25rem !important;
+                font-size: clamp(2.1rem, 7vw, 3.6rem);
+            }
+            .menu-item {
+                min-height: 34px;
+                padding: 0.35rem 0.18rem;
             }
         }
     </style>
 </head>
 <body class="bg-white">
 
-    <main class="hero-wrapper d-flex flex-column justify-content-center align-items-center text-center px-3 px-sm-4 py-4 py-md-5">
-        <!-- Transparent PNG Logo -->
-        <img src="assets/img/logo.png"
-             alt="Carel Black Logo"
-             class="brand-logo img-fluid mb-3 mb-md-4">
+    <div class="spectrum-bar" aria-hidden="true"></div>
 
-        <!-- Main Title in Exile Font -->
-        <h1 class="brand-title mb-4 mb-md-5">Carel Black</h1>
+    <div class="page-shell">
+        <main class="store-home d-flex flex-column justify-content-center align-items-center text-center px-3 px-sm-4 py-4 py-md-5">
 
-        <!-- Vertical Action Buttons -->
-        <div class="btn-stack d-flex flex-column align-items-center gap-3">
-            <a href="dashboard.jsp" class="btn action-btn btn-dashboard">
-                Dashboard
+            <!-- Logo -> Store Home (index.html) -->
+            <a href="index.html" class="brand-link mb-2 mb-md-3" aria-label="flying Jvck Home">
+                <img src="assets/img/logo.png"
+                     onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = 'assets/img/logo.png'; }"
+                     alt="flying Jvck Logo"
+                     class="brand-logo img-fluid">
             </a>
 
-            <div class="store-btn-wrap" title="Coming soon">
-                <button type="button"
-                        class="btn action-btn btn-store-disabled"
-                        disabled
-                        aria-disabled="true">
-                    Store
+            <!-- Title with Zoomed Art Revealed Inside the Letters -->
+            <h1 class="brand-title mb-2"
+                id="brandTitle"
+                data-text="flying Jvck"
+                tabindex="0"
+                aria-label="flying Jvck">flying Jvck</h1>
+
+            <!-- Live Pretoria Clock -->
+            <p id="ptaClock" class="live-clock mb-4">PTA // --/--/---- --:--</p>
+
+            <!-- Exact Nav Order: Blog, Previews, Lookbook, Shop, Contact, Subscribe -->
+            <nav class="home-menu d-flex flex-column mb-4" aria-label="Store navigation">
+                <a href="blog.html" class="menu-item">
+                    <span>Blog</span>
+                    <span class="menu-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+
+                <a href="previews.html" class="menu-item">
+                    <span>Previews</span>
+                    <span class="menu-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+
+                <a href="lookbook.html" class="menu-item">
+                    <span>Lookbook</span>
+                    <span class="menu-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+
+                <a href="store.html" class="menu-item">
+                    <span>Shop</span>
+                    <span class="menu-arrow" aria-hidden="true">&rarr;</span>
+                </a>
+
+                <button type="button" class="menu-item" data-bs-toggle="modal" data-bs-target="#contactModal">
+                    <span>Contact</span>
+                    <span class="menu-arrow" aria-hidden="true">+</span>
                 </button>
+
+                <button type="button" class="menu-item" data-bs-toggle="modal" data-bs-target="#subscribeModal">
+                    <span>Subscribe</span>
+                    <span class="menu-arrow" aria-hidden="true">+</span>
+                </button>
+            </nav>
+
+            <!-- Horizontal Mini Media Links -->
+            <div class="media-links mb-3" aria-label="Social Media">
+                <a href="#" class="media-icon ig" aria-label="Instagram" title="Instagram">
+                    <i class="bi bi-instagram"></i>
+                </a>
+                <a href="#" class="media-icon tt" aria-label="TikTok" title="TikTok">
+                    <i class="bi bi-tiktok"></i>
+                </a>
+                <a href="#" class="media-icon xt" aria-label="X / Twitter" title="X">
+                    <i class="bi bi-twitter-x"></i>
+                </a>
+                <a href="#" class="media-icon yt" aria-label="YouTube" title="YouTube">
+                    <i class="bi bi-youtube"></i>
+                </a>
+            </div>
+
+            <!-- Subtle Paint Palette Accent -->
+            <div class="palette-scent" aria-hidden="true">
+                <span class="palette-dot" style="background-color: #111111;"></span>
+                <span class="palette-dot" style="background-color: #ff2a6d;"></span>
+                <span class="palette-dot" style="background-color: #ff7b00;"></span>
+                <span class="palette-dot" style="background-color: #ffd400;"></span>
+                <span class="palette-dot" style="background-color: #00c853;"></span>
+                <span class="palette-dot" style="background-color: #00b0ff;"></span>
+                <span class="palette-dot" style="background-color: #7c4dff;"></span>
+            </div>
+
+        </main>
+
+        <!-- Bottom Footer: About Us, Accessibility, Privacy, FAQ -->
+        <footer class="site-footer text-center">
+            <div class="footer-links mb-2">
+                <button type="button" class="footer-link" onclick="openInfoModal('about')">About Us</button>
+                <button type="button" class="footer-link" onclick="openInfoModal('accessibility')">Accessibility</button>
+                <button type="button" class="footer-link" onclick="openInfoModal('privacy')">Privacy</button>
+                <button type="button" class="footer-link" onclick="openInfoModal('faq')">FAQ</button>
+            </div>
+            <div class="text-muted" style="font-size: 0.68rem; letter-spacing: 0.08em;">
+                &copy; 2026 FLYING JVCK &bull; PRETORIA
+            </div>
+        </footer>
+    </div>
+
+    <!-- Contact Modal -->
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fs-6 fw-bold text-uppercase" id="contactModalLabel">Contact flying Jvck</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="contactAlert" class="alert d-none small"></div>
+                    <form id="contactForm">
+                        <div class="mb-3">
+                            <label for="contactName" class="form-label small fw-bold text-uppercase">Name</label>
+                            <input type="text" class="form-control" id="contactName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contactEmail" class="form-label small fw-bold text-uppercase">Email</label>
+                            <input type="email" class="form-control" id="contactEmail" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="contactMessage" class="form-label small fw-bold text-uppercase">Message</label>
+                            <textarea class="form-control" id="contactMessage" rows="3" required></textarea>
+                        </div>
+                        <button type="submit" id="contactSubmitBtn" class="btn btn-carel w-100 py-2 text-uppercase small fw-bold">
+                            Send Message
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
-    </main>
+    </div>
+
+    <!-- Subscribe Modal -->
+    <div class="modal fade" id="subscribeModal" tabindex="-1" aria-labelledby="subscribeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fs-6 fw-bold text-uppercase" id="subscribeModalLabel">First Access Drops</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="small text-muted mb-3">
+                        Join the list to get early notice whenever new clothing or hand-painted canvas pieces drop.
+                    </p>
+                    <div id="subscribeAlert" class="alert d-none small"></div>
+                    <form id="subscribeForm">
+                        <div class="mb-3">
+                            <label for="subscribeEmail" class="form-label small fw-bold text-uppercase">Email Address</label>
+                            <input type="email" class="form-control" id="subscribeEmail" placeholder="you@example.com" required>
+                        </div>
+                        <button type="submit" id="subscribeSubmitBtn" class="btn btn-carel w-100 py-2 text-uppercase small fw-bold">
+                            Subscribe
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Info Modal (About Us / Accessibility / Privacy / FAQ) -->
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fs-6 fw-bold text-uppercase" id="infoModalTitle">Info</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 small text-secondary" id="infoModalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+
+    <script>
+        function updatePtaClock() {
+            const now = new Date();
+            const datePart = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Africa/Johannesburg',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(now);
+
+            const timePart = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Africa/Johannesburg',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(now);
+
+            document.getElementById('ptaClock').textContent = `PTA // ${datePart} ${timePart} SAST`;
+        }
+
+        updatePtaClock();
+        setInterval(updatePtaClock, 1000);
+
+        const brandTitle = document.getElementById('brandTitle');
+        brandTitle.addEventListener('click', () => brandTitle.classList.toggle('revealed'));
+        brandTitle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                brandTitle.classList.toggle('revealed');
+            }
+        });
+
+        // Info Modal Content
+        const infoContent = {
+            about: {
+                title: 'About flying Jvck',
+                body: 'Born in Pretoria (PTA), flying Jvck blends streetwear garments with original hand-painted canvas art in limited drops.'
+            },
+            accessibility: {
+                title: 'Accessibility',
+                body: 'flying Jvck is committed to making our store accessible across desktop, tablet, and mobile devices with keyboard navigation and clear contrast.'
+            },
+            privacy: {
+                title: 'Privacy Policy',
+                body: 'Subscriber emails and contact inquiries are used strictly to communicate flying Jvck drop alerts, order updates, and customer support.'
+            },
+            faq: {
+                title: 'Frequently Asked Questions',
+                body: '<strong>Drops:</strong> Subscribers receive early alerts when new clothing and canvas pieces arrive.<br><br><strong>Payments:</strong> Instant EFT & card checkout powered by Ozow (coming soon).<br><br><strong>Origin:</strong> Crafted & dispatched from Pretoria, South Africa.'
+            }
+        };
+
+        let infoModal;
+        document.addEventListener('DOMContentLoaded', () => {
+            infoModal = new bootstrap.Modal(document.getElementById('infoModal'));
+        });
+
+        function openInfoModal(key) {
+            const item = infoContent[key];
+            if (!item) return;
+            document.getElementById('infoModalTitle').textContent = item.title;
+            document.getElementById('infoModalBody').innerHTML = item.body;
+            infoModal.show();
+        }
+
+        // Subscribe Handler (ready for POST api/subscribe)
+        document.getElementById('subscribeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('subscribeEmail').value.trim();
+            const alertBox = document.getElementById('subscribeAlert');
+            const btn = document.getElementById('subscribeSubmitBtn');
+
+            alertBox.className = 'alert d-none small';
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const res = await fetch('api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (res.ok) {
+                    alertBox.textContent = 'Subscribed! You will get first notice on new drops.';
+                    alertBox.className = 'alert alert-dark small';
+                    document.getElementById('subscribeForm').reset();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alertBox.textContent = err.error || 'Could not subscribe right now.';
+                    alertBox.className = 'alert alert-danger small';
+                }
+            } catch (err) {
+                alertBox.textContent = 'Network error. Please try again.';
+                alertBox.className = 'alert alert-danger small';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Subscribe';
+            }
+        });
+
+        // Contact Handler (ready for POST api/contact)
+        document.getElementById('contactForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('contactName').value.trim();
+            const email = document.getElementById('contactEmail').value.trim();
+            const message = document.getElementById('contactMessage').value.trim();
+            const alertBox = document.getElementById('contactAlert');
+            const btn = document.getElementById('contactSubmitBtn');
+
+            alertBox.className = 'alert d-none small';
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const res = await fetch('api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, message })
+                });
+
+                if (res.ok) {
+                    alertBox.textContent = 'Message sent! We will get back to you soon.';
+                    alertBox.className = 'alert alert-dark small';
+                    document.getElementById('contactForm').reset();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alertBox.textContent = err.error || 'Could not send message right now.';
+                    alertBox.className = 'alert alert-danger small';
+                }
+            } catch (err) {
+                alertBox.textContent = 'Network error. Please try again.';
+                alertBox.className = 'alert alert-danger small';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Message';
+            }
+        });
+    </script>
 
 </body>
 </html>

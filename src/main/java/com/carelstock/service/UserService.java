@@ -15,9 +15,14 @@ import com.carelstock.model.User;
 
 public class UserService {
     private final UserDAO userDAO;
-
+    
     public UserService() {
         this.userDAO = new UserDAO();
+    }
+
+    // Constructor injection for testing/mocking
+    public UserService(UserDAO userDAO) {
+        this.userDAO = userDAO;
     }
 
     // Register a new user with input validation

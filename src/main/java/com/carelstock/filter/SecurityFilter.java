@@ -41,8 +41,11 @@ public class SecurityFilter implements Filter {
     /** Reachable without a session. Exact matches only. */
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/api/auth/login",
-            "/api/auth/logout"
+            "/api/auth/logout",
+            "/api/products",
+            "/api/categories"
     );
+
 
     /**
      * GET-only paths reachable without a session. Empty on purpose: this is an admin inventory
