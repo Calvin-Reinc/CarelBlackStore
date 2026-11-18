@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>flying Jvck - Previews</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Monospace web font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        @font-face {
+            font-family: "Super Squad";
+            src: url("assets/fonts/SuperSquad.woff2") format("woff2"),
+                 url("assets/fonts/SuperSquad.ttf") format("truetype"),
+                 url("assets/fonts/SuperSquad.otf") format("opentype");
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --cb-black: #111111;
+            --cb-white: #ffffff;
+            --cb-muted: #6c757d;
+            --cb-border: #e5e7eb;
+            --cb-spectrum: linear-gradient(
+                90deg,
+                #ff2a6d 0%,
+                #ff7b00 18%,
+                #ffd400 36%,
+                #00c853 54%,
+                #00b0ff 72%,
+                #7c4dff 88%,
+                #ff2a6d 100%
+            );
+        }
+
+        html, body {
+            background-color: var(--cb-white);
+            color: var(--cb-black);
+            font-family: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            margin: 0;
+            padding: 0;
+        }
+
+        .spectrum-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--cb-spectrum);
+            z-index: 1030;
+        }
+
+        .page-shell {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .previews-header {
+            padding-top: 1.5rem;
+            padding-bottom: 0.75rem;
+        }
+
+        .header-logo {
+            width: clamp(64px, 10vw, 88px);
+            height: auto;
+            display: block;
+            margin-inline: auto;
+            transition: transform 0.25s ease;
+        }
+
+        .logo-link:hover .header-logo {
+            transform: scale(1.04);
+        }
+
+        .live-clock {
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            color: var(--cb-muted);
+            text-transform: uppercase;
+        }
+
+        /* Category filter tabs */
+        .category-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem 1.25rem;
+            border-bottom: 1px solid var(--cb-border);
+            padding-bottom: 0.75rem;
+        }
+
+        .cat-tab {
+            position: relative;
+            background: transparent;
+            border: none;
+            padding: 0.25rem 0.1rem;
+            font-size: 0.76rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--cb-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .cat-tab:hover {
+            color: var(--cb-black);
+        }
+
+        .cat-tab.active {
+            color: var(--cb-black);
+            font-weight: 700;
+        }
+
+        .cat-tab.active::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -2px;
+            width: 100%;
+            height: 2px;
+            background: var(--cb-spectrum);
+        }
+
+        /* Category section heading in grouped grid */
+        .cat-section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding-bottom: 0.45rem;
+            border-bottom: 1px solid var(--cb-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Gallery item card */
+        .preview-card {
+            display: block;
+            text-decoration: none;
+            color: var(--cb-black);
+            cursor: pointer;
+        }
+
+        .preview-img-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            background-color: #f8f9fa;
+            border: 1px solid var(--cb-border);
+            overflow: hidden;
+            transition: border-color 0.25s ease;
+        }
+
+        .preview-card:hover .preview-img-wrap {
+            border-color: var(--cb-black);
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+
+        .preview-card:hover .preview-img {
+            transform: scale(1.03);
+        }
+
+        .preview-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd;
+            font-size: 1.5rem;
+        }
+
+        .preview-card-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-top: 0.45rem;
+            line-height: 1.3;
+        }
+
+        /* Individual Item Detail View */
+        .detail-stage {
+            border-top: 1px solid var(--cb-border);
+            padding-top: 1.5rem;
+        }
+
+        .detail-img-frame {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            max-height: 600px;
+            background-color: #f8f9fa;
+            border: 1px solid var(--cb-border);
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+
+        .detail-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            cursor: zoom-in;
+            transition: transform 0.35s ease;
+        }
+
+        .detail-img:hover {
+            transform: scale(1.02);
+        }
+
+        .detail-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 38px;
+            height: 38px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--cb-black);
+            color: var(--cb-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            z-index: 2;
+        }
+
+        .detail-arrow:hover:not(:disabled) {
+            background-color: var(--cb-black);
+            color: var(--cb-white);
+        }
+
+        .detail-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .detail-arrow.prev { left: 0.65rem; }
+        .detail-arrow.next { right: 0.65rem; }
+
+        .btn-outline-cb {
+            border: 1px solid var(--cb-black);
+            border-radius: 0;
+            background: transparent;
+            color: var(--cb-black);
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.5rem 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .btn-outline-cb:hover:not(:disabled) {
+            background-color: var(--cb-black);
+            color: var(--cb-white);
+        }
+
+        .story-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--cb-muted);
+        }
+
+        .story-body {
+            font-size: 0.88rem;
+            line-height: 1.7;
+            color: #212529;
+            white-space: pre-line;
+        }
+
+        /* Zoom Lightbox Window */
+        .modal-content {
+            border-radius: 0 !important;
+            border: 1px solid var(--cb-black);
+        }
+
+        .zoom-stage {
+            max-height: 82vh;
+            overflow: auto;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .zoom-img {
+            max-width: 100%;
+            max-height: 76vh;
+            object-fit: contain;
+            display: block;
+            cursor: zoom-in;
+            transition: transform 0.25s ease;
+            transform-origin: center center;
+        }
+
+        .zoom-stage.zoomed-2x {
+            display: block;
+            text-align: center;
+        }
+
+        .zoom-stage.zoomed-2x .zoom-img {
+            max-width: none;
+            max-height: none;
+            width: 165%;
+            height: auto;
+            margin: 0 auto;
+            cursor: zoom-out;
+        }
+
+        /* Footer nav */
+        .footer-nav {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-top: 1px solid #f1f3f5;
+            padding: 1rem 0 1.5rem;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .footer-nav-link {
+            color: var(--cb-muted);
+            text-decoration: none;
+        }
+
+        .footer-nav-link:hover {
+            color: var(--cb-black);
+        }
+
+        .footer-nav-link.active {
+            color: var(--cb-black);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-white">
+
+    <div class="spectrum-bar" aria-hidden="true"></div>
+
+    <div class="page-shell container-lg px-3 px-md-4">
+
+        <!-- Top Logo -> Store Home (index.html) + Live PTA Clock -->
+        <header class="previews-header text-center">
+            <a href="index.html" class="logo-link d-inline-block mb-2" aria-label="flying Jvck Home">
+                <img src="assets/img/Artwork.png"
+                     onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = 'assets/img/logo.png'; }"
+                     alt="flying Jvck Logo"
+                     class="header-logo img-fluid">
+            </a>
+            <p id="ptaClock" class="live-clock mb-3">PTA // --/--/---- --:--</p>
+
+            <!-- Category Filter Bar (shown in Grid Mode) -->
+            <nav id="categoryBar" class="category-bar" aria-label="Preview Categories"></nav>
+        </header>
+
+        <main class="flex-grow-1 py-3 py-md-4">
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-5">
+                <div class="spinner-border spinner-border-sm text-dark" role="status">
+                    <span class="visually-hidden">Loading previews...</span>
+                </div>
+                <p class="small text-muted mt-2 mb-0">Loading previews...</p>
+            </div>
+
+            <!-- Empty / Error State -->
+            <div id="emptyState" class="text-center py-5 border d-none">
+                <i class="bi bi-grid fs-2 text-muted d-block mb-2"></i>
+                <p class="small text-muted mb-3" id="emptyStateText">No items found.</p>
+                <button type="button" class="btn-outline-cb" onclick="showGridView(true)">All Previews</button>
+            </div>
+
+            <!-- MODE A: All Items Grouped by Category Grid -->
+            <section id="gridView" class="d-none" aria-label="Item Previews Grid">
+                <div id="groupedCategoriesContainer" class="d-flex flex-column gap-5"></div>
+            </section>
+
+            <!-- MODE B: Individual Item Preview (click image to zoom in; scroll left/right to switch items) -->
+            <section id="detailView" class="detail-stage d-none" aria-label="Item Preview">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <button type="button" class="btn-outline-cb" onclick="showGridView(true)">
+                        &larr; All Items
+                    </button>
+                    <span class="small text-muted" id="detailCounter">1 of 1</span>
+                </div>
+
+                <div class="row g-4 g-lg-5 align-items-start">
+                    <!-- Left: Clickable Image (opens Zoom Window) + Left/Right Arrows -->
+                    <div class="col-12 col-md-6">
+                        <div class="detail-img-frame" id="detailTouchZone">
+                            <img id="detailImg" src="" alt="Preview item" class="detail-img d-none">
+                            <div id="detailPlaceholder" class="preview-placeholder d-none">
+                                <i class="bi bi-image"></i>
+                            </div>
+
+                            <button type="button" id="imgPrevBtn" class="detail-arrow prev" aria-label="Previous item">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" id="imgNextBtn" class="detail-arrow next" aria-label="Next item">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Item Story -->
+                    <div class="col-12 col-md-6">
+                        <p class="story-label mb-1" id="detailCategory">Category</p>
+                        <h1 class="h4 fw-bold mb-3 pb-3 border-bottom" id="detailName">Item Name</h1>
+
+                        <p class="story-label mb-2">Story / Notes</p>
+                        <p class="story-body mb-0" id="detailStory">No story notes provided yet.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Minimal Footer Navigation -->
+        <footer class="footer-nav">
+            <div>
+                <a href="store.html" class="footer-nav-link">shop</a>
+            </div>
+            <div class="d-flex flex-wrap gap-3 gap-md-4">
+                <a href="previews.html" class="footer-nav-link active">previews</a>
+                <a href="lookbook.html" class="footer-nav-link">lookbook</a>
+                <a href="blog.html" class="footer-nav-link">blog</a>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Zoomed Image Window -->
+    <div class="modal fade" id="zoomModal" tabindex="-1" aria-labelledby="zoomModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-bottom py-2 px-3">
+                    <h5 class="modal-title small fw-bold text-uppercase mb-0" id="zoomModalTitle">Item Zoom</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="zoom-stage" id="zoomStage">
+                        <img id="zoomModalImg" src="" alt="Zoomed item" class="zoom-img">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+
+    <script>
+        let categories = [];
+        let allProducts = [];
+        let filteredProducts = [];
+        let selectedCategoryId = null; // null = All categories
+        let activeItemIndex = -1;
+        let zoomModal = null;
+
+        // Live Pretoria Clock (no seconds)
+        function updatePtaClock() {
+            const now = new Date();
+            const datePart = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Africa/Johannesburg',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(now);
+
+            const timePart = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Africa/Johannesburg',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).format(now);
+
+            document.getElementById('ptaClock').textContent = `PTA // ${datePart} ${timePart} SAST`;
+        }
+
+        updatePtaClock();
+        setInterval(updatePtaClock, 5000);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            zoomModal = new bootstrap.Modal(document.getElementById('zoomModal'));
+            initPreviews();
+        });
+
+        window.addEventListener('popstate', syncFromUrl);
+
+        async function initPreviews() {
+            try {
+                const [catRes, prodRes] = await Promise.all([
+                    fetch('api/categories'),
+                    fetch('api/products?limit=100')
+                ]);
+
+                if (catRes.ok) {
+                    const rawCats = await catRes.json();
+                    categories = Array.isArray(rawCats)
+                        ? [...rawCats].sort((a, b) => (b.category_id ?? 0) - (a.category_id ?? 0))
+                        : [];
+                }
+
+                if (!prodRes.ok) {
+                    showEmpty('Unable to load previews right now.');
+                    return;
+                }
+
+                const rawProds = await prodRes.json();
+                allProducts = Array.isArray(rawProds) ? rawProds : [];
+
+                await syncFromUrl();
+            } catch (err) {
+                console.error('Previews init error:', err);
+                showEmpty('Network error loading previews.');
+            }
+        }
+
+        async function syncFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const itemId = Number(params.get('id'));
+            const catId = Number(params.get('category_id'));
+
+            selectedCategoryId = catId > 0 ? catId : null;
+            filteredProducts = getOrderedProductsForGrid();
+
+            renderCategoryTabs();
+
+            if (itemId > 0) {
+                await openItemById(itemId, false);
+            } else {
+                showGridView(false);
+            }
+        }
+
+        function getOrderedProductsForGrid() {
+            if (selectedCategoryId) {
+                return allProducts.filter(p => (p.category_id ?? 0) === selectedCategoryId);
+            }
+            const ordered = [];
+            categories.forEach(c => {
+                const cid = c.category_id ?? 0;
+                allProducts.forEach(p => {
+                    if ((p.category_id ?? 0) === cid) ordered.push(p);
+                });
+            });
+            const knownIds = new Set(ordered.map(p => p.product_id ?? 0));
+            allProducts.forEach(p => {
+                if (!knownIds.has(p.product_id ?? 0)) ordered.push(p);
+            });
+            return ordered;
+        }
+
+        function renderCategoryTabs() {
+            const bar = document.getElementById('categoryBar');
+            bar.innerHTML = '';
+
+            const allBtn = document.createElement('button');
+            allBtn.type = 'button';
+            allBtn.className = 'cat-tab' + (selectedCategoryId === null ? ' active' : '');
+            allBtn.textContent = 'All';
+            allBtn.addEventListener('click', () => {
+                selectedCategoryId = null;
+                filteredProducts = getOrderedProductsForGrid();
+                renderCategoryTabs();
+                showGridView(true);
+            });
+            bar.appendChild(allBtn);
+
+            categories.forEach(c => {
+                const cid = c.category_id ?? 0;
+                const cname = c.category_name ?? `Category #${cid}`;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'cat-tab' + (selectedCategoryId === cid ? ' active' : '');
+                btn.textContent = cname;
+                btn.addEventListener('click', () => {
+                    selectedCategoryId = cid;
+                    filteredProducts = getOrderedProductsForGrid();
+                    renderCategoryTabs();
+                    showGridView(true);
+                });
+                bar.appendChild(btn);
+            });
+        }
+
+        function showGridView(updateUrl = true) {
+            if (updateUrl) {
+                const url = new URL(window.location);
+                url.searchParams.delete('id');
+                if (selectedCategoryId) {
+                    url.searchParams.set('category_id', String(selectedCategoryId));
+                } else {
+                    url.searchParams.delete('category_id');
+                }
+                window.history.pushState({}, '', url);
+            }
+
+            document.title = 'flying Jvck - Previews';
+            document.getElementById('categoryBar').classList.remove('d-none');
+            document.getElementById('detailView').classList.add('d-none');
+            document.getElementById('loadingState').classList.add('d-none');
+
+            const container = document.getElementById('groupedCategoriesContainer');
+            container.innerHTML = '';
+
+            const itemsToDisplay = getOrderedProductsForGrid();
+            filteredProducts = itemsToDisplay;
+
+            if (itemsToDisplay.length === 0) {
+                showEmpty('No items found in this category yet.');
+                return;
+            }
+
+            document.getElementById('emptyState').classList.add('d-none');
+            document.getElementById('gridView').classList.remove('d-none');
+
+            if (selectedCategoryId !== null) {
+                const catObj = categories.find(c => (c.category_id ?? 0) === selectedCategoryId);
+                const catName = catObj ? (catObj.category_name ?? `Category #${selectedCategoryId}`) : 'Category';
+                container.appendChild(buildCategorySection(catName, itemsToDisplay));
+            } else {
+                const usedProductIds = new Set();
+
+                categories.forEach(c => {
+                    const cid = c.category_id ?? 0;
+                    const cname = c.category_name ?? `Category #${cid}`;
+                    const catItems = itemsToDisplay.filter(p => (p.category_id ?? 0) === cid);
+                    if (catItems.length > 0) {
+                        catItems.forEach(p => usedProductIds.add(p.product_id ?? 0));
+                        container.appendChild(buildCategorySection(cname, catItems));
+                    }
+                });
+
+                const uncategorized = itemsToDisplay.filter(p => !usedProductIds.has(p.product_id ?? 0));
+                if (uncategorized.length > 0) {
+                    container.appendChild(buildCategorySection('Archive', uncategorized));
+                }
+            }
+        }
+
+        function buildCategorySection(title, items) {
+            const section = document.createElement('div');
+
+            const heading = document.createElement('div');
+            heading.className = 'cat-section-title mb-3';
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = title;
+            const countSpan = document.createElement('span');
+            countSpan.className = 'text-muted fw-normal';
+            countSpan.textContent = `${items.length} ${items.length === 1 ? 'item' : 'items'}`;
+            heading.appendChild(titleSpan);
+            heading.appendChild(countSpan);
+            section.appendChild(heading);
+
+            const row = document.createElement('div');
+            row.className = 'row g-3 g-md-4 row-cols-2 row-cols-sm-3 row-cols-lg-4';
+
+            items.forEach(p => {
+                const pid = p.product_id ?? 0;
+                const pname = p.product_name ?? 'Untitled Piece';
+                const col = document.createElement('div');
+                col.className = 'col';
+
+                const card = document.createElement('a');
+                card.href = `previews.html?id=${encodeURIComponent(pid)}`;
+                card.className = 'preview-card';
+                card.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openItemById(pid, true);
+                });
+
+                const imgWrap = document.createElement('div');
+                imgWrap.className = 'preview-img-wrap';
+
+                if (p.image_url) {
+                    const img = document.createElement('img');
+                    img.src = p.image_url;
+                    img.alt = pname;
+                    img.className = 'preview-img';
+                    imgWrap.appendChild(img);
+                } else {
+                    const ph = document.createElement('div');
+                    ph.className = 'preview-placeholder';
+                    ph.innerHTML = '<i class="bi bi-image"></i>';
+                    imgWrap.appendChild(ph);
+                }
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'preview-card-title';
+                nameDiv.textContent = pname;
+
+                card.appendChild(imgWrap);
+                card.appendChild(nameDiv);
+                col.appendChild(card);
+                row.appendChild(col);
+            });
+
+            section.appendChild(row);
+            return section;
+        }
+
+        async function openItemById(productId, pushHistory = true) {
+            let idx = filteredProducts.findIndex(p => (p.product_id ?? 0) === productId);
+
+            if (idx === -1) {
+                selectedCategoryId = null;
+                filteredProducts = getOrderedProductsForGrid();
+                renderCategoryTabs();
+                idx = filteredProducts.findIndex(p => (p.product_id ?? 0) === productId);
+            }
+
+            if (idx === -1) {
+                try {
+                    const res = await fetch(`api/products?id=${encodeURIComponent(productId)}`);
+                    if (res.ok) {
+                        const single = await res.json();
+                        allProducts.unshift(single);
+                        filteredProducts = getOrderedProductsForGrid();
+                        idx = filteredProducts.findIndex(p => (p.product_id ?? 0) === productId);
+                    }
+                } catch (err) {
+                    console.error('Error fetching single preview:', err);
+                }
+            }
+
+            if (idx === -1) {
+                showEmpty('The requested item could not be found.');
+                return;
+            }
+
+            activeItemIndex = idx;
+            renderActiveItem(pushHistory);
+        }
+
+        function renderActiveItem(pushHistory = true) {
+            const p = filteredProducts[activeItemIndex];
+            if (!p) return;
+
+            const pid = p.product_id ?? 0;
+            const pname = p.product_name ?? 'Untitled Piece';
+            const story = (p.description && p.description.trim())
+                ? p.description.trim()
+                : 'No story notes provided for this piece yet.';
+            const catId = p.category_id ?? 0;
+            const catObj = categories.find(c => (c.category_id ?? 0) === catId);
+            const catName = catObj ? (catObj.category_name ?? `Category #${catId}`) : 'Archive';
+
+            if (pushHistory) {
+                const url = new URL(window.location);
+                url.searchParams.set('id', String(pid));
+                window.history.pushState({ id: pid }, '', url);
+            }
+
+            document.title = `flying Jvck - ${pname}`;
+            document.getElementById('loadingState').classList.add('d-none');
+            document.getElementById('emptyState').classList.add('d-none');
+            document.getElementById('gridView').classList.add('d-none');
+            document.getElementById('categoryBar').classList.add('d-none');
+            document.getElementById('detailView').classList.remove('d-none');
+
+            const detailImg = document.getElementById('detailImg');
+            const detailPh = document.getElementById('detailPlaceholder');
+            if (p.image_url) {
+                detailImg.src = p.image_url;
+                detailImg.alt = pname;
+                detailImg.classList.remove('d-none');
+                detailPh.classList.add('d-none');
+            } else {
+                detailImg.src = '';
+                detailImg.classList.add('d-none');
+                detailPh.classList.remove('d-none');
+            }
+
+            document.getElementById('detailCategory').textContent = catName;
+            document.getElementById('detailName').textContent = pname;
+            document.getElementById('detailStory').textContent = story;
+            document.getElementById('detailCounter').textContent = `${activeItemIndex + 1} of ${filteredProducts.length}`;
+
+            const atStart = activeItemIndex <= 0;
+            const atEnd = activeItemIndex >= filteredProducts.length - 1;
+            document.getElementById('imgPrevBtn').disabled = atStart;
+            document.getElementById('imgNextBtn').disabled = atEnd;
+        }
+
+        function stepItem(delta) {
+            if (document.getElementById('detailView').classList.contains('d-none')) return;
+            const nextIdx = activeItemIndex + delta;
+            if (nextIdx < 0 || nextIdx >= filteredProducts.length) return;
+            activeItemIndex = nextIdx;
+            renderActiveItem(true);
+        }
+
+        // Open zoomed window when clicking the item image
+        document.getElementById('detailImg').addEventListener('click', () => {
+            const p = filteredProducts[activeItemIndex];
+            if (!p || !p.image_url || !zoomModal) return;
+
+            const zoomStage = document.getElementById('zoomStage');
+            const zoomImg = document.getElementById('zoomModalImg');
+            zoomStage.classList.remove('zoomed-2x');
+            zoomImg.src = p.image_url;
+            zoomImg.alt = p.product_name ?? 'Zoomed item';
+            document.getElementById('zoomModalTitle').textContent = p.product_name ?? 'Item Zoom';
+
+            zoomModal.show();
+        });
+
+        // Toggle extra 2x close-up inside the zoom window
+        document.getElementById('zoomModalImg').addEventListener('click', () => {
+            document.getElementById('zoomStage').classList.toggle('zoomed-2x');
+        });
+
+        document.getElementById('imgPrevBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            stepItem(-1);
+        });
+
+        document.getElementById('imgNextBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            stepItem(1);
+        });
+
+        // Keyboard left/right scrolling in item preview
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('zoomModal').classList.contains('show')) return;
+            if (e.key === 'ArrowLeft') stepItem(-1);
+            if (e.key === 'ArrowRight') stepItem(1);
+        });
+
+        // Mobile touch swipe left/right on preview image
+        let touchStartX = 0;
+        const touchZone = document.getElementById('detailTouchZone');
+        touchZone.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        touchZone.addEventListener('touchend', (e) => {
+            const diffX = e.changedTouches[0].screenX - touchStartX;
+            if (Math.abs(diffX) > 45) {
+                stepItem(diffX < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+
+        function showEmpty(message) {
+            document.getElementById('loadingState').classList.add('d-none');
+            document.getElementById('gridView').classList.add('d-none');
+            document.getElementById('detailView').classList.add('d-none');
+            document.getElementById('emptyStateText').textContent = message;
+            document.getElementById('emptyState').classList.remove('d-none');
+        }
+    </script>
+
+</body>
+</html>
