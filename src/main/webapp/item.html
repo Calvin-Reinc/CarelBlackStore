@@ -34,16 +34,10 @@
             --cb-white: #ffffff;
             --cb-muted: #6c757d;
             --cb-border: #e5e7eb;
-            --cb-spectrum: linear-gradient(
-                90deg,
-                #ff2a6d 0%,
-                #ff7b00 18%,
-                #ffd400 36%,
-                #00c853 54%,
-                #00b0ff 72%,
-                #7c4dff 88%,
-                #ff2a6d 100%
-            );
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         html, body {
@@ -52,16 +46,7 @@
             font-family: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             margin: 0;
             padding: 0;
-        }
-
-        .spectrum-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: var(--cb-spectrum);
-            z-index: 1040;
+            -webkit-overflow-scrolling: touch;
         }
 
         .page-shell {
@@ -71,42 +56,32 @@
             flex-direction: column;
         }
 
-        /* 3-Column Sticky Header: Left Spacer | Center Logo (+ Clock at top) | Right Cart */
-        /* 3-Column Sticky Header: Left Spacer | Center Logo (+ Clock at top) | Right Cart */
+        /* 3-Column Sticky Header (fixed padding prevents sticky layout bounce) */
         .store-header {
             display: grid;
-            grid-template-columns: 1fr auto 1fr;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             align-items: center;
-            padding-top: 1.15rem;
-            padding-bottom: 0.9rem;
+            gap: 0.5rem;
+            padding-top: 0.9rem;
+            padding-bottom: 0.85rem;
             border-bottom: 1px solid var(--cb-border);
             background-color: var(--cb-white);
             position: sticky;
-            top: 3px;
+            top: 0;
             z-index: 1020;
-            transition: padding 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+            transition: background-color 0.25s ease, border-color 0.25s ease;
         }
 
-        /* When scrolled: transparent bar, no border, no clock, no cart — ONLY the PNG logo remains */
+        /* Scrolled state: transparent bar, no border, no time, no cart -> ONLY the PNG logo stays */
         .store-header.scrolled {
-            padding-top: 0.65rem;
-            padding-bottom: 0.5rem;
             background-color: transparent;
             border-bottom-color: transparent;
             pointer-events: none;
         }
 
-        .store-header.scrolled .logo-link {
+        .logo-link {
+            display: inline-block;
             pointer-events: auto;
-        }
-
-        .header-cart-wrap {
-            transition: opacity 0.2s ease;
-        }
-
-        .store-header.scrolled .header-cart-wrap {
-            opacity: 0;
-            pointer-events: none;
         }
 
         .header-logo {
@@ -115,11 +90,7 @@
             display: block;
             margin-inline: auto;
             background-color: transparent;
-            transition: transform 0.25s ease, width 0.25s ease;
-        }
-
-        .store-header.scrolled .header-logo {
-            width: clamp(44px, 6vw, 56px);
+            transition: transform 0.25s ease;
         }
 
         .logo-link:hover .header-logo {
@@ -127,20 +98,31 @@
         }
 
         .live-clock {
-            font-size: 0.66rem;
+            font-size: 0.65rem;
             letter-spacing: 0.08em;
             color: var(--cb-muted);
             text-transform: uppercase;
-            max-height: 24px;
-            opacity: 1;
-            overflow: hidden;
-            transition: opacity 0.2s ease, max-height 0.2s ease, margin 0.2s ease;
+            white-space: nowrap;
+            will-change: opacity, transform;
+            transition: opacity 0.22s ease, transform 0.22s ease;
         }
 
         .store-header.scrolled .live-clock {
             opacity: 0;
-            max-height: 0;
-            margin: 0 !important;
+            transform: translateY(-4px);
+            pointer-events: none;
+        }
+
+        .header-cart-wrap {
+            min-width: 0;
+            will-change: opacity, transform;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        .store-header.scrolled .header-cart-wrap {
+            opacity: 0;
+            transform: translateY(-4px);
+            pointer-events: none;
         }
 
         .icon-btn {
@@ -149,15 +131,16 @@
             border: 1px solid var(--cb-black);
             border-radius: 0;
             color: var(--cb-black);
-            height: 36px;
-            padding: 0 0.65rem;
+            height: 34px;
+            padding: 0 0.55rem;
             font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.06em;
             text-transform: uppercase;
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.35rem;
+            white-space: nowrap;
             cursor: pointer;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
@@ -323,7 +306,7 @@
             background-image: linear-gradient(135deg, #111111 0%, #111111 44%, #6c757d 72%, #000000 100%);
             background-size: 260% 260%;
             background-position: 0% 50%;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -388,15 +371,18 @@
             flex-shrink: 0;
         }
 
-        /* Footer */
+        /* Pure Monochrome Footer Nav */
+        .site-footer {
+            border-top: 1px solid #f1f3f5;
+            padding: 1rem 0 1.5rem;
+        }
+
         .footer-nav {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            gap: 1rem;
-            border-top: 1px solid #f1f3f5;
-            padding: 1rem 0 1.5rem;
+            gap: 0.85rem 1rem;
             font-size: 0.78rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -419,25 +405,23 @@
 </head>
 <body class="bg-white">
 
-    <div class="spectrum-bar" aria-hidden="true"></div>
-
     <div class="page-shell container-xl px-3 px-md-4">
 
-        <!-- Header: Left Spacer | Center Logo (+ Clock at top, only Logo when scrolled) | Right Cart -->
+        <!-- Header: Left Spacer | Center Logo + PTA Clock | Right Cart (both Clock & Cart hide on scroll) -->
         <header class="store-header" id="storeHeader">
             <div></div>
 
-            <div class="text-center px-2">
-                <a href="index.html" class="logo-link d-inline-block" aria-label="flying Jvck Home">
+            <div class="text-center">
+                <a href="index.html" class="logo-link" aria-label="flying Jvck Home">
                     <img src="assets/img/Artwork.png"
                          onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = 'assets/img/logo.png'; }"
                          alt="flying Jvck Logo"
-                         class="header-logo img-fluid">
+                         class="header-logo">
                 </a>
                 <p id="ptaClock" class="live-clock mt-1 mb-0 d-none d-sm-block">PTA // --/--/---- --:--</p>
             </div>
 
-            <div class="d-flex justify-content-end">
+            <div class="d-flex justify-content-end header-cart-wrap">
                 <button type="button"
                         class="icon-btn"
                         data-bs-toggle="offcanvas"
@@ -519,15 +503,17 @@
 
         </main>
 
-        <!-- Footer Navigation -->
-        <footer class="footer-nav">
-            <div>
-                <a href="store.html" class="footer-nav-link active">shop</a>
-            </div>
-            <div class="d-flex flex-wrap gap-3 gap-md-4">
-                <a href="previews.html" class="footer-nav-link">previews</a>
-                <a href="lookbook.html" class="footer-nav-link">lookbook</a>
-                <a href="blog.html" class="footer-nav-link">blog</a>
+        <!-- Pure Monochrome Footer Navigation -->
+        <footer class="site-footer">
+            <div class="footer-nav">
+                <div>
+                    <a href="store.html" class="footer-nav-link active">shop</a>
+                </div>
+                <div class="d-flex flex-wrap gap-3 gap-md-4">
+                    <a href="previews.html" class="footer-nav-link">previews</a>
+                    <a href="lookbook.html" class="footer-nav-link">lookbook</a>
+                    <a href="blog.html" class="footer-nav-link">blog</a>
+                </div>
             </div>
         </footer>
 
@@ -657,10 +643,25 @@
         updatePtaClock();
         setInterval(updatePtaClock, 5000);
 
-        // Keep only the compact logo at top center when scrolled down
+        // Smooth scroll header state using rAF + hysteresis
         const storeHeader = document.getElementById('storeHeader');
+        let scrollTicking = false;
+        let isScrolled = false;
+
         window.addEventListener('scroll', () => {
-            storeHeader.classList.toggle('scrolled', window.scrollY > 24);
+            if (scrollTicking) return;
+            scrollTicking = true;
+            window.requestAnimationFrame(() => {
+                const y = window.scrollY;
+                if (!isScrolled && y > 36) {
+                    isScrolled = true;
+                    storeHeader.classList.add('scrolled');
+                } else if (isScrolled && y < 16) {
+                    isScrolled = false;
+                    storeHeader.classList.remove('scrolled');
+                }
+                scrollTicking = false;
+            });
         }, { passive: true });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -837,7 +838,7 @@
             setTimeout(() => { box.className = 'alert d-none small py-2 mb-3'; }, 3000);
         }
 
-        // --- CART LOGIC ---
+        // --- CART LOGIC (Persisted in localStorage, zero login) ---
         function getCart() {
             try {
                 const raw = localStorage.getItem(CART_KEY);
