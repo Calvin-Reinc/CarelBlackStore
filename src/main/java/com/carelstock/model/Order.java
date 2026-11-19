@@ -1,30 +1,29 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.carelstock.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
+
 /**
  *
  * @author squid
  */
-
-
-
 public class Order {
     private int orderId;
     private String customerName;
+    private String customerEmail;
+    private String customerPhone;
+    private String shippingAddress;
+    private String paymentReference;
     private BigDecimal totalAmount;
     private String status;
     private Timestamp createdAt;
-    private List<OrderItem> items; // Represents the line items associated with this order
+    private List<OrderItem> items;
 
     // Constructors
     public Order() {}
 
+    // Existing 6-arg constructor preserved for backward compatibility
     public Order(int orderId, String customerName, BigDecimal totalAmount, String status, Timestamp createdAt, List<OrderItem> items) {
         this.orderId = orderId;
         this.customerName = customerName;
@@ -49,6 +48,38 @@ public class Order {
 
     public void setCustomerName(String customerName) {
         this.customerName = customerName;
+    }
+
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone;
+    }
+
+    public String getShippingAddress() {
+        return shippingAddress;
+    }
+
+    public void setShippingAddress(String shippingAddress) {
+        this.shippingAddress = shippingAddress;
+    }
+
+    public String getPaymentReference() {
+        return paymentReference;
+    }
+
+    public void setPaymentReference(String paymentReference) {
+        this.paymentReference = paymentReference;
     }
 
     public BigDecimal getTotalAmount() {

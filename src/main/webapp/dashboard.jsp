@@ -28,7 +28,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carel Black - Admin Dashboard</title>
+    <title>flying Jvck - Admin Dashboard</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -49,7 +49,6 @@
             margin: 0;
         }
 
-        /* 3-column header keeps the center logo truly centered */
         .top-header {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -74,7 +73,6 @@
             letter-spacing: 0.02em;
         }
 
-        /* Sharp monochrome surfaces */
         .card,
         .modal-content,
         .offcanvas,
@@ -101,7 +99,6 @@
             box-shadow: 0 0 0 0.2rem rgba(17, 17, 17, 0.12);
         }
 
-        /* Active monochrome button with gray-and-black gradient hover */
         .btn-carel {
             color: #ffffff;
             border: 1px solid #111111;
@@ -125,10 +122,9 @@
             color: #ffffff;
         }
 
-        /* Offcanvas menu links */
         .menu-nav-link {
             color: #111111;
-            padding: 0.75rem 1rem;
+            padding: 0.7rem 1rem;
             border: 1px solid transparent;
             text-decoration: none;
             display: flex;
@@ -149,7 +145,6 @@
             border-color: #111111;
         }
 
-        /* Row-relative product image thumbnail */
         .product-thumb {
             width: 2.75rem;
             height: 2.75rem;
@@ -195,6 +190,12 @@
             letter-spacing: 0.04em;
             font-weight: 600;
         }
+
+        .msg-cell {
+            max-width: 360px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body class="bg-white">
@@ -214,8 +215,11 @@
         </div>
 
         <div class="d-flex justify-content-center">
-            <a href="index.html" class="d-inline-flex align-items-center text-decoration-none" title="Carel Black Home">
-                <img src="assets/img/logo.png" alt="Carel Black Logo" class="header-logo">
+            <a href="dashboard.jsp" class="d-inline-flex align-items-center text-decoration-none" title="Admin Dashboard">
+                <img src="assets/img/logo.png"
+                     onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'assets/img/Artwork.png'; }"
+                     alt="flying Jvck Logo"
+                     class="header-logo">
             </a>
         </div>
 
@@ -236,14 +240,17 @@
     <div class="offcanvas offcanvas-start" tabindex="-1" id="menuOffcanvas" aria-labelledby="menuOffcanvasLabel">
         <div class="offcanvas-header border-bottom">
             <div class="d-flex align-items-center gap-2">
-                <img src="assets/img/logo.png" alt="Logo" style="height: 50px; width: auto;">
-                <h5 class="offcanvas-title brand-font fs-3 mb-0" id="menuOffcanvasLabel">Carel Black</h5>
+                <img src="assets/img/logo.png"
+                     onerror="if (!this.dataset.fb) { this.dataset.fb = '1'; this.src = 'assets/img/Artwork.png'; }"
+                     alt="Logo"
+                     style="height: 44px; width: auto;">
+                <h5 class="offcanvas-title brand-font fs-3 mb-0" id="menuOffcanvasLabel">Admin</h5>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column p-3">
-            <p class="text-uppercase text-muted small fw-semibold mb-2 px-2">Sections</p>
-            <nav class="d-flex flex-column gap-2">
+            <p class="text-uppercase text-muted small fw-semibold mb-2 px-2">Store Management</p>
+            <nav class="d-flex flex-column gap-1">
                 <a class="menu-nav-link active" href="#" onclick="switchTab('products', event)" id="navProducts">
                     <i class="bi bi-box-seam me-3"></i> Products
                 </a>
@@ -258,7 +265,19 @@
                 </a>
             </nav>
 
-            <hr class="my-4">
+            <hr class="my-3">
+
+            <p class="text-uppercase text-muted small fw-semibold mb-2 px-2">Community</p>
+            <nav class="d-flex flex-column gap-1">
+                <a class="menu-nav-link" href="#" onclick="switchTab('subscribers', event)" id="navSubscribers">
+                    <i class="bi bi-envelope-check me-3"></i> Subscribers
+                </a>
+                <a class="menu-nav-link" href="#" onclick="switchTab('messages', event)" id="navMessages">
+                    <i class="bi bi-chat-left-text me-3"></i> Messages
+                </a>
+            </nav>
+
+            <hr class="my-3">
 
             <p class="text-uppercase text-muted small fw-semibold mb-2 px-2">Admin</p>
             <a class="menu-nav-link" href="register.jsp">
@@ -349,9 +368,7 @@
                                 <th class="pe-3 text-end">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="productsTableBody">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="productsTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -377,9 +394,7 @@
                                 <th class="pe-3 text-end">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="categoriesTableBody">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="categoriesTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -402,9 +417,7 @@
                                 <th class="pe-3 text-end">Quick Adjust</th>
                             </tr>
                         </thead>
-                        <tbody id="stockTableBody">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="stockTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -418,21 +431,118 @@
                         <thead class="table-dark">
                             <tr>
                                 <th class="ps-3">Order ID</th>
-                                <th>User ID</th>
-                                <th>Total Amount</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Total</th>
                                 <th>Status</th>
-                                <th>Created At</th>
+                                <th>Date</th>
                                 <th class="pe-3 text-end">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="ordersTableBody">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="ordersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUBSCRIBERS SECTION -->
+        <div id="subscribersSection" class="content-section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted">
+                        Total Subscribers: <strong class="text-dark" id="subscriberCount">0</strong>
+                    </span>
+                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="copyAllSubscriberEmails()">
+                        <i class="bi bi-clipboard me-1"></i> Copy All Emails
+                    </button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">ID</th>
+                                <th>Email</th>
+                                <th>Subscribed At</th>
+                                <th class="pe-3 text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscribersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTACT MESSAGES SECTION -->
+        <div id="messagesSection" class="content-section" style="display: none;">
+            <div class="card">
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">ID</th>
+                                <th>From</th>
+                                <th>Message</th>
+                                <th>Received</th>
+                                <th class="pe-3 text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messagesTableBody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-semibold" id="orderDetailTitle">Order #0</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="border p-3 h-100 bg-light">
+                                <div class="text-uppercase text-muted small fw-semibold mb-2">Customer &amp; Delivery</div>
+                                <div class="fw-semibold" id="odCustomerName">-</div>
+                                <div class="small text-muted" id="odCustomerEmail">-</div>
+                                <div class="small text-muted mb-2" id="odCustomerPhone">-</div>
+                                <div class="small" id="odShippingAddress" style="white-space: pre-line;">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border p-3 h-100">
+                                <div class="text-uppercase text-muted small fw-semibold mb-2">Payment &amp; Status</div>
+                                <div class="small mb-1"><span class="text-muted">Status:</span> <span class="badge bg-dark" id="odStatus">-</span></div>
+                                <div class="small mb-1"><span class="text-muted">Paystack Ref:</span> <span class="fw-medium" id="odPaymentRef">-</span></div>
+                                <div class="small mb-1"><span class="text-muted">Date:</span> <span id="odCreatedAt">-</span></div>
+                                <div class="fs-5 fw-bold mt-2" id="odTotal">R 0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-uppercase text-muted small fw-semibold mb-2">Items Ordered</div>
+                    <div class="table-responsive border">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="pe-3 text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="odItemsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Product Modal (Add/Edit with Image Upload) -->
     <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
@@ -531,17 +641,34 @@
             crossorigin="anonymous"></script>
 
     <script>
-        let productModal, categoryModal, menuOffcanvas;
+        let productModal, categoryModal, orderDetailModal, menuOffcanvas;
         const productsCache = new Map();
         const categoriesCache = new Map();
-        const DEFAULT_PRODUCT_IMAGE = 'assets/img/default.png'; // or your default image path
+        const ordersCache = new Map();
+        let cachedSubscribers = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             productModal = new bootstrap.Modal(document.getElementById('productModal'));
             categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            orderDetailModal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
             menuOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('menuOffcanvas'));
             loadProducts();
         });
+
+        function formatDate(raw) {
+            if (!raw || raw === 'N/A') return 'N/A';
+            const d = new Date(raw);
+            return isNaN(d.getTime()) ? String(raw) : d.toLocaleString();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
         async function fetchCategoryMap() {
             try {
@@ -561,9 +688,7 @@
                     categories.forEach(c => {
                         const cid = c.category_id ?? 0;
                         const cname = c.category_name ?? `Category #\${cid}`;
-                        if (cid > 0) {
-                            categoriesCache.set(cid, cname);
-                        }
+                        if (cid > 0) categoriesCache.set(cid, cname);
                     });
                 }
                 populateCategorySelect();
@@ -603,16 +728,6 @@
             }
         }
 
-        function escapeHtml(value) {
-            return String(value ?? '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        // Live preview when choosing an image file in the modal
         document.getElementById('modalProductImage').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const preview = document.getElementById('modalImagePreview');
@@ -622,7 +737,6 @@
             }
         });
 
-        // Navigation via Left Offcanvas Window
         function switchTab(tabName, event) {
             if (event) event.preventDefault();
             document.querySelectorAll('.content-section').forEach(sec => sec.style.display = 'none');
@@ -648,11 +762,19 @@
                 document.getElementById('navOrders').classList.add('active');
                 document.getElementById('pageTitle').textContent = 'Customer Orders';
                 loadOrders();
+            } else if (tabName === 'subscribers') {
+                document.getElementById('subscribersSection').style.display = 'block';
+                document.getElementById('navSubscribers').classList.add('active');
+                document.getElementById('pageTitle').textContent = 'Drop Subscribers';
+                loadSubscribers();
+            } else if (tabName === 'messages') {
+                document.getElementById('messagesSection').style.display = 'block';
+                document.getElementById('navMessages').classList.add('active');
+                document.getElementById('pageTitle').textContent = 'Contact Messages';
+                loadMessages();
             }
 
-            if (menuOffcanvas) {
-                menuOffcanvas.hide();
-            }
+            if (menuOffcanvas) menuOffcanvas.hide();
         }
 
         // --- PRODUCTS LOGIC ---
@@ -670,38 +792,23 @@
 
             productsCache.set(id, p);
 
-            const displayImg = imageUrl || DEFAULT_PRODUCT_IMAGE;
-
-            const thumbHtml = `
-                <a href="product.jsp?id=\${id}" title="View product">
-                    <img src="\${escapeHtml(displayImg)}"
-                         alt="\${escapeHtml(name)}"
-                         class="product-thumb"
-                         onerror="this.onerror=null; this.src='\${DEFAULT_PRODUCT_IMAGE}';">
-                </a>
-            `;
+            const thumbHtml = imageUrl
+                ? `<a href="product.jsp?id=\${id}" title="View product"><img src="\${escapeHtml(imageUrl)}" alt="\${escapeHtml(name)}" class="product-thumb"></a>`
+                : `<a href="product.jsp?id=\${id}" title="View product" class="product-thumb-placeholder text-decoration-none"><i class="bi bi-image"></i></a>`;
 
             return `
                 <tr>
                     <td class="ps-3">\${thumbHtml}</td>
                     <td>\${id}</td>
-                    <td>
-                        <a href="product.jsp?id=\${id}" class="product-link">\${escapeHtml(name)}</a>
-                    </td>
+                    <td><a href="product.jsp?id=\${id}" class="product-link">\${escapeHtml(name)}</a></td>
                     <td class="text-muted">\${escapeHtml(desc)}</td>
                     <td>R \${Number(price).toFixed(2)}</td>
                     <td>\${stock}</td>
                     <td>\${escapeHtml(catName)}</td>
                     <td class="pe-3 text-end text-nowrap">
-                        <a href="product.jsp?id=\${id}" class="btn btn-sm btn-outline-dark me-1" title="View Product">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        <button type="button" class="btn btn-sm btn-outline-dark me-1" onclick="openProductModal('edit', \${id})" title="Edit Product">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(\${id})" title="Delete Product">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <a href="product.jsp?id=\${id}" class="btn btn-sm btn-outline-dark me-1" title="View Product"><i class="bi bi-eye"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-dark me-1" onclick="openProductModal('edit', \${id})" title="Edit Product"><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(\${id})" title="Delete Product"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `;
@@ -711,7 +818,7 @@
             const tbody = document.getElementById('productsTableBody');
             try {
                 const [prodRes] = await Promise.all([
-                    fetch('api/products'),
+                    fetch('api/products?limit=100'),
                     fetchCategoryMap()
                 ]);
                 if (prodRes.status === 401) {
@@ -731,9 +838,7 @@
                     return;
                 }
 
-                products.forEach(p => {
-                    tbody.innerHTML += renderProductRow(p);
-                });
+                products.forEach(p => { tbody.innerHTML += renderProductRow(p); });
             } catch (err) {
                 console.error('Error loading products:', err);
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Network error loading products.</td></tr>`;
@@ -764,9 +869,7 @@
         }
 
         async function openProductModal(mode, id = null) {
-            const form = document.getElementById('productForm');
-            form.reset();
-
+            document.getElementById('productForm').reset();
             const preview = document.getElementById('modalImagePreview');
             preview.src = '';
             preview.classList.add('d-none');
@@ -813,18 +916,12 @@
                 formData.append('image', fileInput.files[0]);
             }
 
-            // POST handles multipart/form-data for both create and update (?id=) on Tomcat 10.1
             const url = id ? `api/products?id=\${encodeURIComponent(id)}` : 'api/products';
-
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
 
             try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const res = await fetch(url, { method: 'POST', body: formData });
                 if (res.ok) {
                     productModal.hide();
                     loadProducts();
@@ -834,7 +931,6 @@
                     showFeedback(err.error || 'Failed to save product.', 'danger');
                 }
             } catch (err) {
-                console.error('Save product error:', err);
                 showFeedback('Network error while saving product.', 'danger');
             } finally {
                 saveBtn.disabled = false;
@@ -853,7 +949,6 @@
                     showFeedback('Failed to delete product.', 'danger');
                 }
             } catch (err) {
-                console.error('Delete error:', err);
                 showFeedback('Network error while deleting product.', 'danger');
             }
         }
@@ -863,10 +958,7 @@
             const tbody = document.getElementById('categoriesTableBody');
             try {
                 const res = await fetch('api/categories');
-                if (res.status === 401) {
-                    window.location.href = 'login.html';
-                    return;
-                }
+                if (res.status === 401) { window.location.href = 'login.html'; return; }
                 if (!res.ok) {
                     tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Failed to load categories.</td></tr>`;
                     return;
@@ -893,9 +985,7 @@
                             <td class="fw-medium">\${escapeHtml(name)}</td>
                             <td class="text-muted">\${escapeHtml(desc)}</td>
                             <td class="pe-3 text-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory(\${id})">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory(\${id})"><i class="bi bi-trash"></i></button>
                             </td>
                         </tr>
                     `;
@@ -917,14 +1007,12 @@
                 category_name: document.getElementById('modalCategoryName').value.trim(),
                 description: document.getElementById('modalCategoryDesc').value.trim()
             };
-
             try {
                 const res = await fetch('api/categories', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 if (res.ok) {
                     categoryModal.hide();
                     loadCategories();
@@ -933,7 +1021,6 @@
                     showFeedback('Failed to add category.', 'danger');
                 }
             } catch (err) {
-                console.error('Add category error:', err);
                 showFeedback('Network error while adding category.', 'danger');
             }
         });
@@ -957,11 +1044,8 @@
         async function loadStockLevels() {
             const tbody = document.getElementById('stockTableBody');
             try {
-                const res = await fetch('api/products');
-                if (res.status === 401) {
-                    window.location.href = 'login.html';
-                    return;
-                }
+                const res = await fetch('api/products?limit=100');
+                if (res.status === 401) { window.location.href = 'login.html'; return; }
                 if (!res.ok) {
                     tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Failed to load stock levels.</td></tr>`;
                     return;
@@ -1002,12 +1086,10 @@
         async function updateStock(id, currentStock, delta) {
             const newStock = currentStock + delta;
             if (newStock < 0) return;
-
             try {
                 const getRes = await fetch(`api/products?id=\${id}`);
                 if (!getRes.ok) return;
                 const p = await getRes.json();
-
                 p.stock_quantity = newStock;
 
                 const res = await fetch(`api/products?id=\${id}`, {
@@ -1015,7 +1097,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(p)
                 });
-
                 if (res.ok) {
                     loadStockLevels();
                     showFeedback('Stock level updated.', 'success');
@@ -1027,43 +1108,74 @@
             }
         }
 
-        // --- ORDERS LOGIC ---
+        // --- ORDERS LOGIC (Customer contact + shipping + line items) ---
+        async function ensureProductsCached() {
+            if (productsCache.size > 0) return;
+            try {
+                const res = await fetch('api/products?limit=100');
+                if (res.ok) {
+                    const products = await res.json();
+                    if (Array.isArray(products)) {
+                        products.forEach(p => productsCache.set(p.product_id ?? 0, p));
+                    }
+                }
+            } catch (ignored) {}
+        }
+
         async function loadOrders() {
             const tbody = document.getElementById('ordersTableBody');
             try {
-                const res = await fetch('api/orders');
-                if (res.status === 401) {
-                    window.location.href = 'login.html';
-                    return;
-                }
+                const [res] = await Promise.all([
+                    fetch('api/orders'),
+                    ensureProductsCached()
+                ]);
+                if (res.status === 401) { window.location.href = 'login.html'; return; }
                 if (!res.ok) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Failed to load orders.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Failed to load orders.</td></tr>`;
                     return;
                 }
                 const orders = await res.json();
                 tbody.innerHTML = '';
+                ordersCache.clear();
 
                 if (!Array.isArray(orders) || orders.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No orders found.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No completed orders yet.</td></tr>`;
                     return;
                 }
 
                 orders.forEach(o => {
                     const orderId = o.order_id ?? 0;
-                    const userId = o.user_id ?? 0;
+                    const customerName = o.customer_name ?? 'Customer';
+                    const customerEmail = o.customer_email ?? '';
+                    const customerPhone = o.customer_phone ?? '';
                     const total = o.total_amount ?? 0;
-                    const status = o.status ?? 'UNKNOWN';
-                    const createdAt = o.created_at ?? 'N/A';
+                    const status = o.status ?? 'COMPLETED';
+                    const createdAt = formatDate(o.created_at);
+                    const items = Array.isArray(o.items) ? o.items : [];
+                    const totalQty = items.reduce((sum, it) => sum + (it.quantity ?? 0), 0);
+
+                    ordersCache.set(orderId, o);
+
+                    const contactLine = [customerEmail, customerPhone].filter(Boolean).join(' • ');
 
                     tbody.innerHTML += `
                         <tr>
-                            <td class="ps-3">\${orderId}</td>
-                            <td>\${userId}</td>
-                            <td>R \${Number(total).toFixed(2)}</td>
+                            <td class="ps-3 fw-semibold">#\${orderId}</td>
+                            <td>
+                                <div class="fw-medium">\${escapeHtml(customerName)}</div>
+                                <div class="small text-muted">\${escapeHtml(contactLine || 'No contact info')}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">\${totalQty} \${totalQty === 1 ? 'item' : 'items'}</span>
+                            </td>
+                            <td class="fw-semibold">R \${Number(total).toFixed(2)}</td>
                             <td><span class="badge bg-dark">\${escapeHtml(status)}</span></td>
-                            <td>\${escapeHtml(createdAt)}</td>
-                            <td class="pe-3 text-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteOrder(\${orderId})">
+                            <td class="small text-muted">\${escapeHtml(createdAt)}</td>
+                            <td class="pe-3 text-end text-nowrap">
+                                <button type="button" class="btn btn-sm btn-outline-dark me-1" onclick="openOrderDetail(\${orderId})" title="View Order Details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteOrder(\${orderId})" title="Delete Order">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -1073,6 +1185,48 @@
             } catch (err) {
                 console.error('Error loading orders:', err);
             }
+        }
+
+        function openOrderDetail(orderId) {
+            const o = ordersCache.get(orderId);
+            if (!o) return;
+
+            document.getElementById('orderDetailTitle').textContent = `Order #\${o.order_id ?? orderId}`;
+            document.getElementById('odCustomerName').textContent = o.customer_name ?? 'Customer';
+            document.getElementById('odCustomerEmail').textContent = o.customer_email ?? 'No email';
+            document.getElementById('odCustomerPhone').textContent = o.customer_phone ?? 'No phone';
+            document.getElementById('odShippingAddress').textContent = o.shipping_address ?? 'No shipping address recorded.';
+            document.getElementById('odStatus').textContent = o.status ?? 'COMPLETED';
+            document.getElementById('odPaymentRef').textContent = o.payment_reference ?? 'N/A';
+            document.getElementById('odCreatedAt').textContent = formatDate(o.created_at);
+            document.getElementById('odTotal').textContent = `R \${Number(o.total_amount ?? 0).toFixed(2)}`;
+
+            const itemsBody = document.getElementById('odItemsBody');
+            itemsBody.innerHTML = '';
+
+            const items = Array.isArray(o.items) ? o.items : [];
+            if (items.length === 0) {
+                itemsBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No item rows found.</td></tr>`;
+            } else {
+                items.forEach(it => {
+                    const pid = it.product_id ?? 0;
+                    const qty = it.quantity ?? 0;
+                    const unit = Number(it.unit_price ?? 0);
+                    const prod = productsCache.get(pid);
+                    const prodName = prod ? (prod.product_name ?? `Product #\${pid}`) : `Product #\${pid}`;
+
+                    itemsBody.innerHTML += `
+                        <tr>
+                            <td class="ps-3 fw-medium">\${escapeHtml(prodName)}</td>
+                            <td class="text-center">\${qty}</td>
+                            <td class="text-end">R \${unit.toFixed(2)}</td>
+                            <td class="pe-3 text-end fw-semibold">R \${(unit * qty).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            orderDetailModal.show();
         }
 
         async function deleteOrder(id) {
@@ -1086,11 +1240,136 @@
                     showFeedback('Failed to delete order.', 'danger');
                 }
             } catch (err) {
-                console.error('Order delete error:', err);
+                showFeedback('Network error while deleting order.', 'danger');
             }
         }
 
-        // Reusable Bootstrap Alert Feedback Banner
+        // --- SUBSCRIBERS LOGIC ---
+        async function loadSubscribers() {
+            const tbody = document.getElementById('subscribersTableBody');
+            try {
+                const res = await fetch('api/subscribe');
+                if (res.status === 401) { window.location.href = 'login.html'; return; }
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Failed to load subscribers.</td></tr>`;
+                    return;
+                }
+                const list = await res.json();
+                cachedSubscribers = Array.isArray(list) ? list : [];
+                document.getElementById('subscriberCount').textContent = String(cachedSubscribers.length);
+                tbody.innerHTML = '';
+
+                if (cachedSubscribers.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No subscribers yet.</td></tr>`;
+                    return;
+                }
+
+                cachedSubscribers.forEach(s => {
+                    const id = s.subscriber_id ?? 0;
+                    const email = s.email ?? '';
+                    const createdAt = formatDate(s.created_at);
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3">\${id}</td>
+                            <td class="fw-medium">\${escapeHtml(email)}</td>
+                            <td class="small text-muted">\${escapeHtml(createdAt)}</td>
+                            <td class="pe-3 text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSubscriber(\${id})"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error('Error loading subscribers:', err);
+            }
+        }
+
+        async function copyAllSubscriberEmails() {
+            const emails = cachedSubscribers.map(s => s.email).filter(Boolean).join(', ');
+            if (!emails) {
+                showFeedback('No subscriber emails to copy.', 'warning');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(emails);
+                showFeedback('Copied all subscriber emails!', 'success');
+            } catch {
+                showFeedback('Could not access clipboard.', 'danger');
+            }
+        }
+
+        async function deleteSubscriber(id) {
+            if (!confirm('Remove this subscriber?')) return;
+            try {
+                const res = await fetch(`api/subscribe?id=\${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadSubscribers();
+                    showFeedback('Subscriber removed.', 'success');
+                }
+            } catch (err) {
+                console.error('Delete subscriber error:', err);
+            }
+        }
+
+        // --- CONTACT MESSAGES LOGIC ---
+        async function loadMessages() {
+            const tbody = document.getElementById('messagesTableBody');
+            try {
+                const res = await fetch('api/contact');
+                if (res.status === 401) { window.location.href = 'login.html'; return; }
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Failed to load messages.</td></tr>`;
+                    return;
+                }
+                const messages = await res.json();
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(messages) || messages.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No messages yet.</td></tr>`;
+                    return;
+                }
+
+                messages.forEach(m => {
+                    const id = m.message_id ?? 0;
+                    const name = m.name ?? '';
+                    const email = m.email ?? '';
+                    const msg = m.message ?? '';
+                    const createdAt = formatDate(m.created_at);
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3">\${id}</td>
+                            <td>
+                                <div class="fw-medium">\${escapeHtml(name)}</div>
+                                <a href="mailto:\${escapeHtml(email)}" class="small text-muted">\${escapeHtml(email)}</a>
+                            </td>
+                            <td class="msg-cell small">\${escapeHtml(msg)}</td>
+                            <td class="small text-muted">\${escapeHtml(createdAt)}</td>
+                            <td class="pe-3 text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMessage(\${id})"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error('Error loading messages:', err);
+            }
+        }
+
+        async function deleteMessage(id) {
+            if (!confirm('Delete this message?')) return;
+            try {
+                const res = await fetch(`api/contact?id=\${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMessages();
+                    showFeedback('Message deleted.', 'success');
+                }
+            } catch (err) {
+                console.error('Delete message error:', err);
+            }
+        }
+
         function showFeedback(message, type = 'success') {
             const container = document.getElementById('alertContainer');
             if (!container) return;

@@ -42,17 +42,26 @@ public class SecurityFilter implements Filter {
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/api/auth/login",
             "/api/auth/logout",
-            "/api/products",
-            "/api/categories"
+            "/api/checkout/paystack",
+            "/api/checkout/paystack/webhook"
     );
 
+    /** POST-only paths reachable without a session (visitor subscribe & contact forms). */
+    private static final Set<String> PUBLIC_POST_PATHS = Set.of(
+            "/api/subscribe",
+            "/api/contact"
+    );
 
     /**
      * GET-only paths reachable without a session. Empty on purpose: this is an admin inventory
      * system, and these endpoints expose prices and stock levels. To publish a read-only catalogue,
      * add "/api/products" and "/api/categories" here (exact matches, GET only).
      */
-    private static final Set<String> PUBLIC_GET_PATHS = Set.of();
+    private static final Set<String> PUBLIC_GET_PATHS = Set.of(
+            "/api/products",
+            "/api/categories",
+            "/api/checkout/paystack/status"
+    );
 
     /** POSTs that legitimately carry no body, so they are exempt from the JSON content-type rule. */
     private static final Set<String> BODYLESS_POST_PATHS = Set.of("/api/auth/logout");
@@ -105,7 +114,8 @@ public class SecurityFilter implements Filter {
 
         // 4. Public endpoints
         if (PUBLIC_PATHS.contains(path)
-                || ("GET".equals(method) && PUBLIC_GET_PATHS.contains(path))) {
+                || ("GET".equals(method) && PUBLIC_GET_PATHS.contains(path))
+                || ("POST".equals(method) && PUBLIC_POST_PATHS.contains(path))) {
             chain.doFilter(request, response);
             return;
         }

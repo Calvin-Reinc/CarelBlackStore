@@ -644,7 +644,7 @@
                 <div id="checkoutAlert" class="alert d-none small py-2"></div>
 
                 <button type="button" id="checkoutBtn" class="btn btn-carel w-100 py-2" onclick="openCheckoutModal()">
-                    Checkout with Ozow &rarr;
+                    Checkout &rarr;
                 </button>
             </div>
         </div>
@@ -684,7 +684,7 @@
                         </div>
 
                         <button type="submit" id="confirmOrderBtn" class="btn btn-carel w-100 py-2">
-                            Pay with Ozow
+                            Pay with Paystack
                         </button>
                     </form>
                 </div>
@@ -1180,10 +1180,10 @@
             const btn = document.getElementById('confirmOrderBtn');
             alertBox.className = 'alert d-none small';
             btn.disabled = true;
-            btn.textContent = 'Connecting to Ozow...';
+            btn.textContent = 'Connecting to Paystack...';
 
             try {
-                const res = await fetch('api/checkout/ozow', {
+                const res = await fetch('api/checkout/paystack', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1203,7 +1203,7 @@
                     checkoutModal.hide();
                 } else {
                     const err = await res.json().catch(() => ({}));
-                    alertBox.textContent = err.error || 'Ozow checkout is not configured yet.';
+                    alertBox.textContent = err.error || 'Paystack checkout is not configured yet.';
                     alertBox.className = 'alert alert-danger small';
                 }
             } catch (err) {
@@ -1211,7 +1211,7 @@
                 alertBox.className = 'alert alert-danger small';
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Pay with Ozow';
+                btn.textContent = 'Pay with Paystack';
             }
         });
     </script>
