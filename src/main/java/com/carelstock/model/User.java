@@ -10,7 +10,7 @@ import java.sql.Timestamp;
  * @author squid
  */
 
-
+// the User is mapped to the user psql Table
 public class User {
     private int userId;
     private String username;
