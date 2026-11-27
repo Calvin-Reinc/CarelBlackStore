@@ -15,6 +15,20 @@ CarelStock is a full-stack inventory management system and online storefront for
 * **Live Storefront:** `https://carelblackstore.onrender.com/` *(Hosted on Render free tier — first request after sleep may take ~30s to wake)*
 * **Admin Login:** `https://carelblackstore.onrender.com/login.html`
 
+---
+
+## Screenshots
+
+| Storefront Home (`flying Jvck`) | Lookbook Gallery |
+| :---: | :---: |
+| ![Storefront Home](docs/screenshots/01-storefront-home.png) | ![Lookbook](docs/screenshots/02-lookbook.png) |
+
+| Shop & Cart Drawer | Admin Dashboard |
+| :---: | :---: |
+| ![Shop and Cart](docs/screenshots/03-shop-cart.png) | ![Admin Dashboard](docs/screenshots/04-admin-products.png) |
+
+---
+
 ## Features
 
 - **Storefront:** browse and filter products, view product details, and manage a shopping cart.
@@ -33,15 +47,28 @@ CarelStock is a full-stack inventory management system and online storefront for
 - HTML, CSS, JavaScript, and Bootstrap 5
 - Maven, JUnit 5, Mockito, Docker, and Apache Tomcat 10.1
 
-## Architecture
+---
 
-The backend follows a layered structure:
+## Architecture & Engineering Highlights
 
-```text
-Servlet controllers -> Services -> DAOs -> PostgreSQL
-```
+* **Zero-Framework Layered Java Backend (`Controller → Service → DAO → Model`):** Built directly on Jakarta Servlets, WebFilters, JSP, and JDBC to maintain complete control over HTTP lifecycles, SQL queries, and database transactions.
+* **Payment-First Atomic Checkout (Paystack `ZAR`):**
+  * The frontend only submits `{ product_id, quantity }`—never prices.
+  * `PaystackService` validates stock and computes authoritative totals from PostgreSQL, stores a `PENDING` record in `pending_checkouts`, and initializes Paystack in cents.
+  * Orders and stock deductions are **only** written to `orders` / `order_items` after server-side Paystack verification (`GET /transaction/verify/{reference}`) or a verified `x-paystack-signature` (`HMAC-SHA512`) webhook.
+  * An atomic `UPDATE ... WHERE status = 'PENDING'` lock + unique `payment_reference` constraint guarantees duplicate webhooks/redirects never create duplicate orders.
+* **Defense-in-Depth Security (`SecurityFilter`):**
+  * Uses normalized `getServletPath() + getPathInfo()` instead of raw `getRequestURI()` to prevent path-traversal bypasses (`/api/products/../orders`).
+  * Applies `X-Content-Type-Options`, `X-Frame-Options`, and `Cache-Control: no-store` headers.
+  * Enforces strict `application/json` checks (`415`) on mutations (except explicit `multipart/form-data` image routes) and separates `PUBLIC_GET_PATHS` from `PUBLIC_POST_PATHS` so guest subscribe/contact forms stay public while subscriber emails remain `ADMIN`-only (`401` / `403`).
+* **ACID Transactions & Cloud Media Consistency:**
+  * `OrderDAO` executes order insertion, line-item batching, and stock deduction inside an explicit JDBC transaction (`setAutoCommit(false)` / `rollback()`).
+  * `ProductService` validates fields before uploading to Cloudinary, rolls back uploaded assets if the DB write fails, and deletes stale Cloudinary images on replacement or deletion.
+* **Pooled Cloud Persistence & Portability:**
+  * `DatabaseConnection` uses **HikariCP** with `DATABASE_URL` (`postgres://` → `jdbc:postgresql://...?sslmode=require`) environment variable parsing in production and gitignored `*.properties` files locally, plus `DatabaseCleanupListener` for clean Tomcat shutdown.
 
-Servlets expose JSON APIs, and the storefront and admin pages are served from the same web application. Database access uses JDBC with a HikariCP connection pool. Paystack checkout creates a pending checkout using product prices and stock read from the database; after payment is verified, the order is finalized and stock is deducted transactionally.
+---
+## How to Run Locally
 
 ## Requirements
 
@@ -53,9 +80,6 @@ Servlets expose JSON APIs, and the storefront and admin pages are served from th
 - Docker, if using the container workflow below
 
 > **Database schema:** This repository does not currently include SQL migrations or a schema creation script. Provision the tables and constraints expected by the DAOs before starting the application. The application uses `users`, `categories`, `products`, `orders`, `order_items`, `pending_checkouts`, `subscribers`, and `contact_messages`.
-
-
-## How to Run Locally
 
 ### Prerequisites
 * Java 21 (JDK 21)
@@ -158,7 +182,7 @@ erDiagram
         text message
         timestamp created_at
     }
-
+```
 
 ### Then create three gitignored files inside src/main/resources/:
 
@@ -244,77 +268,3 @@ src/test/java/  Unit tests
 Dockerfile      Multi-stage WAR build and Tomcat runtime
 pom.xml         Maven dependencies and build configuration
 ```
-
-
-A full-stack inventory management system and e-commerce storefront built from scratch with **Java 21, Jakarta EE 10, PostgreSQL, Paystack, Cloudinary, and Docker** for **flying Jvck**, an independent Pretoria streetwear and hand-painted canvas art brand.
-
-
----
-
-## Screenshots
-
-| Storefront Home (`flying Jvck`) | Lookbook Gallery |
-| :---: | :---: |
-| ![Storefront Home](docs/screenshots/01-storefront-home.png) | ![Lookbook](docs/screenshots/02-lookbook.png) |
-
-| Shop & Cart Drawer | Admin Dashboard |
-| :---: | :---: |
-| ![Shop and Cart](docs/screenshots/03-shop-cart.png) | ![Admin Dashboard](docs/screenshots/04-admin-products.png) |
-
----
-
-## Key Features
-
-### Public Storefront (`flying Jvck`)
-* **Brand Home (`index.html`):** Supreme-inspired editorial landing page with custom `@font-face` typography, art-through-letters hover reveal, live Pretoria (`PTA // SAST`) clock, **Drop Subscribe** modal, and **Contact** inquiry modal.
-* **Lookbook (`lookbook.html`):** Defaults to the latest category and presents a large focused piece alongside a responsive thumbnail grid, keyboard/button paging, and a bottom category dropup selector.
-* **Previews (`previews.html`):** Grouped category preview grid with story/notes view, swipe/arrow navigation between items, and a click-to-zoom lightbox window (`1×` / `2×` close-up).
-* **Shop & Guest Checkout (`store.html`, `item.html`, `payment-result.html`):** Category sidebar (dropdown on mobile), persistent `localStorage` cart with real-time stock limits, and zero-login guest checkout powered by **Paystack (`ZAR`)**.
-* **Custom Error Page (`error.jsp`):** Minimalist `404` / `500` handler mapped in `web.xml` displaying the brand logo, title, and Pretoria clock.
-
-### Admin Portal (`dashboard.jsp`, `product.jsp`, `register.jsp`)
-* **Inventory & Cloudinary Media:** Full product CRUD with `@MultipartConfig` image uploads (`POST` create & update), live previews, category dropdowns, and quick stock level adjustments.
-* **Order Fulfillment:** Displays completed Paystack orders with full customer contact details (`name`, `email`, `phone`, `shipping_address`), Paystack reference, and itemized line items.
-* **Community Inbox:** Manage drop-alert subscribers (with one-click email export) and customer contact messages.
-* **Admin Account Provisioning (`register.jsp`):** Session-guarded registration so existing admins can onboard co-admins securely.
-
----
-
-## Architecture & Engineering Highlights
-
-* **Zero-Framework Layered Java Backend (`Controller → Service → DAO → Model`):** Built directly on Jakarta Servlets, WebFilters, JSP, and JDBC to maintain complete control over HTTP lifecycles, SQL queries, and database transactions.
-* **Payment-First Atomic Checkout (Paystack `ZAR`):**
-  * The frontend only submits `{ product_id, quantity }`—never prices.
-  * `PaystackService` validates stock and computes authoritative totals from PostgreSQL, stores a `PENDING` record in `pending_checkouts`, and initializes Paystack in cents.
-  * Orders and stock deductions are **only** written to `orders` / `order_items` after server-side Paystack verification (`GET /transaction/verify/{reference}`) or a verified `x-paystack-signature` (`HMAC-SHA512`) webhook.
-  * An atomic `UPDATE ... WHERE status = 'PENDING'` lock + unique `payment_reference` constraint guarantees duplicate webhooks/redirects never create duplicate orders.
-* **Defense-in-Depth Security (`SecurityFilter`):**
-  * Uses normalized `getServletPath() + getPathInfo()` instead of raw `getRequestURI()` to prevent path-traversal bypasses (`/api/products/../orders`).
-  * Applies `X-Content-Type-Options`, `X-Frame-Options`, and `Cache-Control: no-store` headers.
-  * Enforces strict `application/json` checks (`415`) on mutations (except explicit `multipart/form-data` image routes) and separates `PUBLIC_GET_PATHS` from `PUBLIC_POST_PATHS` so guest subscribe/contact forms stay public while subscriber emails remain `ADMIN`-only (`401` / `403`).
-* **ACID Transactions & Cloud Media Consistency:**
-  * `OrderDAO` executes order insertion, line-item batching, and stock deduction inside an explicit JDBC transaction (`setAutoCommit(false)` / `rollback()`).
-  * `ProductService` validates fields before uploading to Cloudinary, rolls back uploaded assets if the DB write fails, and deletes stale Cloudinary images on replacement or deletion.
-* **Pooled Cloud Persistence & Portability:**
-  * `DatabaseConnection` uses **HikariCP** with `DATABASE_URL` (`postgres://` → `jdbc:postgresql://...?sslmode=require`) environment variable parsing in production and gitignored `*.properties` files locally, plus `DatabaseCleanupListener` for clean Tomcat shutdown.
-
----
-
-## REST API Summary
-
-| Endpoint | Methods | Access | Purpose |
-| :--- | :--- | :--- | :--- |
-| `/api/auth/login`, `/api/auth/logout` | `POST` | Public | Session login (`BCrypt`) & logout |
-| `/api/auth/register` | `POST` | Admin | Register additional admin user |
-| `/api/products` | `GET` | Public | List/filter/sort/paginate or get single product |
-| `/api/products` | `POST`, `PUT`, `DELETE` | Admin | Create/update (JSON or `multipart/form-data`) & delete |
-| `/api/categories` | `GET` | Public | List categories |
-| `/api/categories` | `POST`, `DELETE` | Admin | Create & delete categories |
-| `/api/orders` | `GET`, `DELETE` | Admin | View completed orders with line items & delete |
-| `/api/checkout/paystack` | `POST` | Public | Validate cart & initialize Paystack payment |
-| `/api/checkout/paystack/status` | `GET` | Public | Verify Paystack transaction & finalize order |
-| `/api/checkout/paystack/webhook` | `POST` | Paystack | `HMAC-SHA512` verified `charge.success` webhook |
-| `/api/subscribe`, `/api/contact` | `POST` | Public | Save drop subscribers & contact messages |
-| `/api/subscribe`, `/api/contact` | `GET`, `DELETE` | Admin | Read & manage subscribers/messages |
-
----
