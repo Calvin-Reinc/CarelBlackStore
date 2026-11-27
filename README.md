@@ -1,6 +1,6 @@
 # CarelStock — Inventory & E-Commerce Platform (`flying Jvck`)
 
-![CarelStock CI](https://github.com/Calvin-Reinc/CarelStock/actions/workflows/ci.yml/badge.svg)
+[![CarelStock CI](https://github.com/Calvin-Reinc/CarelBlackStore/actions/workflows/ci.yml/badge.svg)](https://github.com/Calvin-Reinc/CarelBlackStore/actions/workflows/ci.yml)
 ![Java 21](https://img.shields.io/badge/Java-21-ED8B00?style=flat&logo=openjdk&logoColor=white)
 ![Jakarta EE 10](https://img.shields.io/badge/Jakarta%20EE-10-007396?style=flat)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?style=flat&logo=postgresql&logoColor=white)
