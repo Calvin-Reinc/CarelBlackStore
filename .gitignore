@@ -4,3 +4,4 @@ src/main/resources/db.properties
 src/main/resources/cloudinary.properties
 target/
 src/main/resources/paystack.properties
+.env
