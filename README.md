@@ -98,8 +98,6 @@ Create your PostgreSQL schema (users, categories, products, orders, order_items,
 follow this Entity Relationship Diagram:
 ## Database Schema (ER Diagram)
 
-## Database Schema (ER Diagram)
-
 ```mermaid
 erDiagram
     categories ||--o{ products : "categorizes (SET NULL)"
